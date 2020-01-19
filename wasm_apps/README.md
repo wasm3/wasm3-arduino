@@ -28,7 +28,8 @@ To rebuild, use `npm run build` or `build.sh`.
 ## TinyGo app
 
 For TinyGo, the LED pin is currently hardcoded in the app.  
-To rebuild, use `build.sh`.
+To rebuild, use `build.sh`.  
+When using TinyGo, be sure to change the main function from `_start` to `cwa_main`.
 
 
 **Note:** for all examples, the resulting `wasm` binary is converted to a C header using `xxd`.

@@ -17,11 +17,10 @@
   "repository":
   {
     "type": "git",
-    "url": "https://github.com/wasm3/wasm3.git"
+    "url": "https://github.com/wasm3/wasm3-arduino.git"
   },
   "homepage": "https://github.com/wasm3/wasm3",
   "frameworks": "*",
   "platforms": "*",
   "examples": "examples/*/*.ino"
 }
-

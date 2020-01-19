@@ -1,0 +1,27 @@
+{
+  "name": "Wasm3",
+  "version": "0.4.2",
+  "description": "The fastest WebAssembly interpreter. It allows you to run WASM files directly on a wide range of devices, including microcontrollers, routers, smartphones and of course within browsers.",
+  "keywords": "esp32, esp8266, wasm, webassembly, interpreter, iot, edge computing",
+  "authors": [
+    {
+      "name":  "Volodymyr Shymanskyy",
+      "url":   "https://github.com/vshymanskyy",
+      "maintainer": true
+    },
+    {
+      "name":  "Steven Massey",
+      "url":   "https://github.com/soundandform",
+    }
+  ],
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/wasm3/wasm3.git"
+  },
+  "homepage": "https://github.com/wasm3/wasm3",
+  "frameworks": "*",
+  "platforms": "*",
+  "examples": "examples/*/*.ino"
+}
+

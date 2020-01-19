@@ -1,0 +1,7 @@
+
+=== VERIFICATION HOWTO ===
+
+1. Open Blink example
+2. Adjust LED_BUILTIN if needed
+3. Upload it to the board
+4. The specified LED should blink

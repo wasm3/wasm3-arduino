@@ -1,0 +1,28 @@
+#######################################
+# Data types (KEYWORD1)
+#######################################
+M3Result	KEYWORD1
+IM3Environment	KEYWORD1
+IM3Runtime	KEYWORD1
+IM3Module	KEYWORD1
+m3ApiRawFunction	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+wasm3	KEYWORD2
+m3_NewEnvironment	KEYWORD2
+m3_NewRuntime	KEYWORD2
+m3_ParseModule	KEYWORD2
+m3_LoadModule	KEYWORD2
+m3_FindFunction	KEYWORD2
+m3_CallWithArgs	KEYWORD2
+m3_LinkRawFunction	KEYWORD2
+
+#######################################
+# Literals (LITERAL1)
+#######################################
+I32	LITERAL1
+I64	LITERAL1
+F32	LITERAL1
+F64	LITERAL1

@@ -13,12 +13,15 @@
 #define LED_BUILTIN   13
 #endif
 
+#define WASM_STACK_SLOTS  1024
+#define NATIVE_STACK_SIZE 32768
+
 /*
  * WebAssembly app
  *
  * This is essentially a simple "Blink" sketch, compiled to WebAssembly
  * The file was generated from ./wasm_apps/cpp
- * You can also find examples for Rust, TinyGO
+ * You can also find examples for Rust, AssemblyScript, TinyGo
  */
 
 unsigned char app_wasm[] = {
@@ -122,7 +125,7 @@ m3ApiRawFunction(m3_dummy)
     m3ApiSuccess();
 }
 
-M3Result  m3_LinkArduino  (IM3Runtime runtime)
+M3Result  LinkArduino  (IM3Runtime runtime)
 {
     IM3Module module = runtime->modules;
     const char* arduino = "arduino";
@@ -150,31 +153,31 @@ void wasm_task(void*)
     M3Result result = m3Err_none;
 
     IM3Environment env = m3_NewEnvironment ();
-    if (!env) FATAL("m3_NewEnvironment", "failed");
+    if (!env) FATAL("NewEnvironment", "failed");
 
-    IM3Runtime runtime = m3_NewRuntime (env, 1024, NULL);
-    if (!runtime) FATAL("m3_NewRuntime", "failed");
+    IM3Runtime runtime = m3_NewRuntime (env, WASM_STACK_SLOTS, NULL);
+    if (!runtime) FATAL("NewRuntime", "failed");
 
     IM3Module module;
     result = m3_ParseModule (env, &module, app_wasm, app_wasm_len-1);
-    if (result) FATAL("m3_ParseModule", result);
+    if (result) FATAL("ParseModule", result);
 
     result = m3_LoadModule (runtime, module);
-    if (result) FATAL("m3_LoadModule", result);
+    if (result) FATAL("LoadModule", result);
 
-    result = m3_LinkArduino (runtime);
-    if (result) FATAL("m3_LinkArduino", result);
+    result = LinkArduino (runtime);
+    if (result) FATAL("LinkArduino", result);
 
     IM3Function f;
     result = m3_FindFunction (&f, runtime, "_start");
-    if (result) FATAL("m3_FindFunction", result);
+    if (result) FATAL("FindFunction", result);
 
     Serial.println("Running WebAssembly...\n");
 
     const char* i_argv[1] = { NULL };
     result = m3_CallWithArgs (f, 0, i_argv);
 
-    if (result) FATAL("m3_CallWithArgs", result);
+    if (result) FATAL("CallWithArgs", result);
 
     // Should not arrive here
 }
@@ -188,7 +191,7 @@ void setup()
 
 #ifdef ESP32
     // On ESP32, we can launch in a separate thread
-    xTaskCreate(&wasm_task, "wasm3", 32768, NULL, 5, NULL);
+    xTaskCreate(&wasm_task, "wasm3", NATIVE_STACK_SIZE, NULL, 5, NULL);
 #else
     wasm_task(NULL);
 #endif

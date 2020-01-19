@@ -25,9 +25,9 @@ yarn install
 ```
 To rebuild, use `npm run build` or `build.sh`.
 
-## TinyGO app
+## TinyGo app
 
-For TinyGO, the LED pin is currently hardcoded in the app.  
+For TinyGo, the LED pin is currently hardcoded in the app.  
 To rebuild, use `build.sh`.
 
 

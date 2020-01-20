@@ -16,10 +16,8 @@
 #define WASM_STACK_SLOTS  1024
 #define NATIVE_STACK_SIZE 32768
 
-// For devices that cannot allocate a 64KiB wasm page
-#if defined(ESP8266) || defined(PARTICLE) //...
+// Most devices that cannot allocate a 64KiB wasm page
 #define WASM_MEMORY_LIMIT 2048
-#endif
 
 /*
  * WebAssembly app
@@ -86,9 +84,9 @@ m3ApiRawFunction(m3_arduino_delay)
 uint8_t mapPinMode(uint8_t mode)
 {
     switch(mode) {
-    case (0): return INPUT;
-    case (1): return OUTPUT;
-    case (2): return INPUT_PULLUP;
+    case 0: return INPUT;
+    case 1: return OUTPUT;
+    case 2: return INPUT_PULLUP;
     }
     return INPUT;
 }

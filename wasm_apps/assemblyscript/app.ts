@@ -20,9 +20,11 @@ const INPUT: u32        = 0x0;
 const OUTPUT: u32       = 0x1;
 const INPUT_PULLUP: u32 = 0x2;
 
-const LED: u32 = 19;
+let LED: u32 = 0;
 
 function setup(): void {
+  LED = getPinLED();
+
   pinMode(LED, OUTPUT);
 }
 

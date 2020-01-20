@@ -1,7 +1,8 @@
+#![feature(core_intrinsics)]
 #![no_std]
 
-mod arduino_api;
-use arduino_api::*;
+mod arduino;
+use arduino::*;
 
 struct App {
   led: u32,
@@ -26,9 +27,4 @@ impl App {
 pub extern fn _start() {
     let app = App::new();
     loop { app.update() };
-}
-
-#[panic_handler]
-fn handle_panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
 }

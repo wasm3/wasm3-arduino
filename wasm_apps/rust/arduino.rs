@@ -23,3 +23,7 @@ pub fn pin_mode       (pin: u32, mode: u32)  { unsafe { unsafe_pinMode(pin, mode
 pub fn digital_write  (pin: u32, value: u32) { unsafe { unsafe_digitalWrite(pin, value) } }
 pub fn get_pin_led    () -> u32              { unsafe { unsafe_getPinLED() } }
 
+#[panic_handler]
+fn handle_panic(_: &core::panic::PanicInfo) -> ! {
+    unsafe { core::intrinsics::unreachable() }
+}

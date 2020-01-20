@@ -17,7 +17,6 @@ To rebuild, use `build.sh`.
 
 ## AssemblyScript app
 
-For AssemblyScript the LED pin is currently hardcoded in the app.  
 Before building the app, please install npm dependencies:
 ```sh
 yarn install

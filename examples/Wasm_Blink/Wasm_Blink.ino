@@ -6,15 +6,20 @@
 
 #include <wasm3.h>
 
-// You can redefine the default LED pin here, if needed
-//#define LED_BUILTIN   D7
+/*
+ * Configuration
+ */
 
-#ifndef LED_BUILTIN
+// Redefine the default LED pin here, if needed
 #define LED_BUILTIN   13
-#endif
 
 #define WASM_STACK_SLOTS  1024
 #define NATIVE_STACK_SIZE 32768
+
+// For devices that cannot allocate a 64KiB wasm page
+#if defined(ESP8266) || defined(PARTICLE) //...
+#define WASM_MEMORY_LIMIT 2048
+#endif
 
 /*
  * WebAssembly app
@@ -157,6 +162,10 @@ void wasm_task(void*)
 
     IM3Runtime runtime = m3_NewRuntime (env, WASM_STACK_SLOTS, NULL);
     if (!runtime) FATAL("NewRuntime", "failed");
+
+#ifdef WASM_MEMORY_LIMIT
+    runtime->memoryLimit = WASM_MEMORY_LIMIT;
+#endif
 
     IM3Module module;
     result = m3_ParseModule (env, &module, app_wasm, app_wasm_len-1);

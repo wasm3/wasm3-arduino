@@ -9,11 +9,9 @@ struct App {
 
 impl App {
     fn new() -> Self {
-        let app = App {
-            led: get_pin_led(),
-        };
-        pin_mode(app.led, OUTPUT);
-        app
+        let led = get_pin_led();
+        pin_mode(led, OUTPUT);
+        App { led }
     }
 
     fn update(&self) {

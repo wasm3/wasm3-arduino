@@ -14,5 +14,8 @@ The library was verified to work with:
 
 **Note:** it requires at least **~64Kb** Flash and **~10Kb** RAM even for minimal functionality.
 
+Please also note that Arduino API here is just for an example.  
+We do not encourage this way of programming, and we have to come up with a better API (i.e. **Event-Driven**, **Resource-Oriented**, or similar).
+
 ### License
 This project is released under The MIT License (MIT)

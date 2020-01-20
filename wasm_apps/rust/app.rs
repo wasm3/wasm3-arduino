@@ -3,13 +3,14 @@
 mod arduino_api;
 use arduino_api::*;
 
-static LED: u32 = 19;
+static mut LED: u32 = 0;
 
-fn setup() {
+unsafe fn setup() {
+    LED = get_pin_led();
     pin_mode(LED, OUTPUT);
 }
 
-fn run() {
+unsafe fn run() {
     digital_write(LED, HIGH);
     delay(100);
     digital_write(LED, LOW);
@@ -19,12 +20,13 @@ fn run() {
 /*
  * Entry point
  */
-
 #[no_mangle]
 pub extern fn _start() {
-    setup();
-    loop {
-        run();
+    unsafe {
+        setup();
+        loop {
+             run();
+        }
     }
 }
 

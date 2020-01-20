@@ -24,7 +24,6 @@ let LED: u32 = 0;
 
 function setup(): void {
   LED = getPinLED();
-
   pinMode(LED, OUTPUT);
 }
 

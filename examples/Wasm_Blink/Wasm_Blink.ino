@@ -179,7 +179,7 @@ void wasm_task(void*)
     result = m3_FindFunction (&f, runtime, "_start");
     if (result) FATAL("FindFunction", result);
 
-    Serial.println("Running WebAssembly...\n");
+    Serial.println("Running WebAssembly...");
 
     const char* i_argv[1] = { NULL };
     result = m3_CallWithArgs (f, 0, i_argv);

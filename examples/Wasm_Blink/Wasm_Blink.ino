@@ -11,7 +11,7 @@
  */
 
 // Redefine the default LED pin here, if needed
-#define LED_BUILTIN   13
+#define LED_PIN   13
 
 #define WASM_STACK_SLOTS  1024
 #define NATIVE_STACK_SIZE 32768
@@ -23,8 +23,8 @@
  * WebAssembly app
  *
  * This is essentially a simple "Blink" sketch, compiled to WebAssembly
- * The file was generated from ./wasm_apps/cpp
- * You can also find examples for Rust, AssemblyScript, TinyGo
+ * You can build a wasm binary using C/C++, Rust, AssemblyScript, TinyGo, ...
+ * See https://github.com/wasm3/wasm3-arduino/tree/master/wasm_apps for details
  */
 
 unsigned char app_wasm[] = {
@@ -119,7 +119,7 @@ m3ApiRawFunction(m3_arduino_getPinLED)
 {
     m3ApiReturnType (uint32_t)
 
-    m3ApiReturn(LED_BUILTIN);
+    m3ApiReturn(LED_PIN);
 }
 
 // Dummy, for TinyGO

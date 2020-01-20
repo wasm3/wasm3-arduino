@@ -31,5 +31,5 @@ pub extern fn _start() {
 
 #[panic_handler]
 fn handle_panic(_: &core::panic::PanicInfo) -> ! {
-    unsafe { core::intrinsics::abort() }
+    unsafe { core::intrinsics::unreachable() }
 }

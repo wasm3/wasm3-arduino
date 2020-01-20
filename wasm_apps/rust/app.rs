@@ -1,3 +1,4 @@
+#![feature(core_intrinsics)]
 #![no_std]
 
 mod arduino_api;
@@ -30,5 +31,5 @@ pub extern fn _start() {
 
 #[panic_handler]
 fn handle_panic(_: &core::panic::PanicInfo) -> ! {
-    loop {}
+    unsafe { core::intrinsics::abort() }
 }

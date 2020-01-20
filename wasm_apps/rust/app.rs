@@ -3,29 +3,29 @@
 mod arduino_api;
 use arduino_api::*;
 
-static LED: u32 = 19;
-
-fn setup() {
-    pin_mode(LED, OUTPUT);
+struct App {
+  led: u32,
 }
 
-fn run() {
-    digital_write(LED, HIGH);
-    delay(100);
-    digital_write(LED, LOW);
-    delay(900);
-}
+impl App {
+    fn new() -> Self {
+        let led = get_pin_led();
+        pin_mode(led, OUTPUT);
+        Self { led }
+    }
 
-/*
- * Entry point
- */
+    fn update(&self) {
+        digital_write(self.led, HIGH);
+        delay(100);
+        digital_write(self.led, LOW);
+        delay(900);
+    }
+}
 
 #[no_mangle]
 pub extern fn _start() {
-    setup();
-    loop {
-        run();
-    }
+    let app = App::new();
+    loop { app.update() };
 }
 
 #[panic_handler]

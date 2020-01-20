@@ -11,7 +11,7 @@ impl App {
     fn new() -> Self {
         let led = get_pin_led();
         pin_mode(led, OUTPUT);
-        App { led }
+        Self { led }
     }
 
     fn update(&self) {

@@ -30,7 +30,7 @@ func getPinLED() uint
 
 
 
-const LED uint = 19
+const LED uint = 13
 
 func setup() {
   pinMode(LED, 1)

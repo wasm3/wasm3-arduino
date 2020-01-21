@@ -10,7 +10,7 @@ This library can be used with
 ## Supported devices
 The library was verified to work with:
 
-`ESP8266`, `ESP32`, `MKR1000`, `BluePill`, `Particle Photon`, `Particle Electron`, `nRF51`, `nRF52`, `Teensy 3.1/3.2`
+`ESP8266`, `ESP32`, `Arduino 101`, `MKR1000`, `RTL8711AM`, `BluePill`, `Particle Photon`, `Particle Electron`, `nRF51`, `nRF52`, `Teensy 3.1/3.2`
 
 **Note:** it requires at least **~64Kb** Flash and **~10Kb** RAM even for minimal functionality.
 

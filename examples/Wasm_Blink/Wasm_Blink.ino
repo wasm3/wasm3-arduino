@@ -11,13 +11,13 @@
  */
 
 // Redefine the default LED pin here, if needed
-#define LED_PIN   13
+#define LED_PIN             13
 
-#define WASM_STACK_SLOTS  1024
-#define NATIVE_STACK_SIZE 32768
+#define WASM_STACK_SLOTS    1024
+#define NATIVE_STACK_SIZE   32768
 
 // For (most) devices that cannot allocate a 64KiB wasm page
-#define WASM_MEMORY_LIMIT 2048
+#define WASM_MEMORY_LIMIT   2048
 
 /*
  * WebAssembly app
@@ -193,6 +193,9 @@ void setup()
 {
     Serial.begin(115200);
     delay(100);
+
+    // This may be needed too see logs after upload
+    while(!Serial) {}
 
     Serial.println("\nWasm3 v" M3_VERSION ", build " __DATE__ " " __TIME__);
 

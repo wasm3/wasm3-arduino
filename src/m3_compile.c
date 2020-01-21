@@ -186,7 +186,7 @@ bool  AllocateExecSlot  (IM3Compilation o, u16 * o_execSlot)
 void DeallocateSlot (IM3Compilation o, i16 i_slotIndex)
 {                                                                                       d_m3Assert (i_slotIndex >= o->firstSlotIndex);
     o->numAllocatedExecSlots--;                                                         d_m3Assert (o->m3Slots [i_slotIndex]);
-    o->m3Slots [i_slotIndex] = 0;
+    o->m3Slots [i_slotIndex] --;
 }
 
 
@@ -671,8 +671,12 @@ M3Result  IsLocalReferencedWithCurrentBlock  (IM3Compilation o, u16 * o_preserve
         {
             if (* o_preservedSlotIndex == i_localIndex)
             {
-                if (not AllocateExecSlot (o, o_preservedSlotIndex))
+                if (not AllocateExecSlot (o, o_preservedSlotIndex)) {
                     _throw (m3Err_functionStackOverflow);
+                }
+            } else {
+                o->m3Slots [*o_preservedSlotIndex] += 1;
+                o->numAllocatedExecSlots++;
             }
 
             o->wasmStack [i] = * o_preservedSlotIndex;
@@ -1262,33 +1266,62 @@ _   (NormalizeType (o_blockType, type));                                if (* o_
 // (versus the COW strategy that happens in SetLocal within a block).  Initially, I thought I'd have to be clever and
 // retroactively insert preservation code to avoid impacting general performance, but this compilation pattern doesn't
 // really occur in compiled Wasm code, so PreserveArgsAndLocals generally does nothing. Still waiting on a real-world case!
-M3Result  PreserveArgsAndLocals  (IM3Compilation o)
-{
+M3Result  PreserveArgsAndLocals  (IM3Compilation o) {
     M3Result result = m3Err_none;
 
-    if (o->stackIndex > o->firstSlotIndex)
+    if (o->block.initStackIndex >= o->stackIndex) // return if block stack is empty.
+        return result;
+
+    bool needed = false;
+    u32 numArgsAndLocals = GetFunctionNumArgsAndLocals (o->function);
+
+    for (u32 i = o->block.initStackIndex; i < o->stackIndex; ++i)
     {
-        u32 numArgsAndLocals = GetFunctionNumArgsAndLocals (o->function);
-        
-        for (u32 i = 0; i < numArgsAndLocals; ++i)
+        if (o->wasmStack [i] < numArgsAndLocals)
         {
-            u16 preservedSlotIndex;
-_           (IsLocalReferencedWithCurrentBlock (o, & preservedSlotIndex, i));
-            
-            if (preservedSlotIndex != i)
-            {
-                u8 type = GetStackType (o, i);
-                IM3Operation op = Is64BitType (type) ? op_CopySlot_64 : op_CopySlot_32;
-                
-                EmitOp          (o, op);
-                EmitSlotOffset  (o, preservedSlotIndex);
-                EmitSlotOffset  (o, i);
-            }
+            needed = true;
+            break;
         }
     }
-    
-    _catch:
-    return result;
+
+    if (!needed) // return if no references to locals.
+        return result;
+
+#if defined(M3_COMPILER_MSVC)
+    u16 preservedStackIndex [128];               // hmm, heap allocate?...
+
+    if (numArgsAndLocals > 128)
+        _throw ("argument/local count overflow");
+#else
+    u16 preservedStackIndex [numArgsAndLocals];
+#endif
+
+    memset (preservedStackIndex, 0xff, numArgsAndLocals * sizeof (u16));
+
+    for (u32 i = o->block.initStackIndex; i < o->stackIndex; ++i)
+    {
+        if (o->wasmStack [i] < numArgsAndLocals)
+        {
+            u16 localSlot = o->wasmStack [i];
+
+            if (preservedStackIndex [localSlot] == 0xffff)
+            {
+                if (not AllocateExecSlot (o, & preservedStackIndex [localSlot]))
+                    _throw (m3Err_functionStackOverflow);
+
+_               (EmitOp (o, op_CopySlot_64));
+                EmitConstant (o, preservedStackIndex [localSlot]);
+                EmitConstant (o, localSlot);
+            } else {
+                o->m3Slots [preservedStackIndex [localSlot]] += 1;
+                o->numAllocatedExecSlots++;
+            }
+
+            o->wasmStack [i] = preservedStackIndex [localSlot];
+        }
+    }
+
+    _catch: return result;
 }
 
 

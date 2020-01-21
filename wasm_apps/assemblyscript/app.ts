@@ -13,12 +13,12 @@ declare function digitalWrite(pin: u32, value: u32): void;
 @external("arduino", "getPinLED")
 declare function getPinLED(): u32;
 
-const LOW: u32  = 0;
-const HIGH: u32 = 1;
+const OFF = 0;
+const ON  = 1;
 
-const INPUT: u32        = 0x0;
-const OUTPUT: u32       = 0x1;
-const INPUT_PULLUP: u32 = 0x2;
+const INPUT        = 0x0;
+const OUTPUT       = 0x1;
+const INPUT_PULLUP = 0x2;
 
 let LED: u32 = 0;
 
@@ -28,9 +28,9 @@ function setup(): void {
 }
 
 function run(): void {
-  digitalWrite(LED, HIGH);
+  digitalWrite(LED, ON);
   delay(100);
-  digitalWrite(LED, LOW);
+  digitalWrite(LED, OFF);
   delay(900);
 }
 

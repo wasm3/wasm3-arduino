@@ -10,8 +10,8 @@ extern {
   #[link_name = "getPinLED"]      fn unsafe_getPinLED() -> u32;
 }
 
-pub static LOW: u32  = 0;
-pub static HIGH: u32 = 1;
+pub static OFF: u32 = 0;
+pub static ON: u32  = 1;
 
 pub static INPUT: u32        = 0x0;
 pub static OUTPUT: u32       = 0x1;

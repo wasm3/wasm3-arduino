@@ -16,9 +16,9 @@ impl App {
     }
 
     fn update(&self) {
-        digital_write(self.led, HIGH);
+        digital_write(self.led, ON);
         delay(100);
-        digital_write(self.led, LOW);
+        digital_write(self.led, OFF);
         delay(900);
     }
 }

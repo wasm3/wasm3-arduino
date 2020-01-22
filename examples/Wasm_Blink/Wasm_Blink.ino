@@ -123,15 +123,9 @@ m3ApiRawFunction(m3_arduino_getPinLED)
 
 m3ApiRawFunction(m3_arduino_print)
 {
-    m3ApiGetArgMem(const char *, out)
-    m3ApiGetArg(int32_t, out_len)
+    m3ApiGetArgMem(const char *, buff)
 
     //printf("api: print %p\n", out);
-
-    char buff[out_len+1];
-    memcpy(buff, out, out_len);
-    buff[out_len] = '\0';
-
     Serial.print(buff);
 
     m3ApiSuccess();
@@ -153,8 +147,8 @@ M3Result  LinkArduino  (IM3Runtime runtime)
     m3_LinkRawFunction (module, arduino, "digitalWrite",     "v(ii)",  &m3_arduino_digitalWrite);
 
     // Convenience functions
-    m3_LinkRawFunction (module, arduino, "print",            "v(*i)",  &m3_arduino_print);
     m3_LinkRawFunction (module, arduino, "getPinLED",        "i()",    &m3_arduino_getPinLED);
+    m3_LinkRawFunction (module, arduino, "print",            "v(*)",   &m3_arduino_print);
 
     // Dummy (for TinyGo)
     m3_LinkRawFunction (module, "env",   "io_get_stdout",    "i()",    &m3_dummy);

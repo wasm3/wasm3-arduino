@@ -5,7 +5,7 @@ export GOROOT=/opt/go
 # Compile
 tinygo  build -target wasm                \
         -panic trap -wasm-abi generic     \
-        -heap-size 81920                  \
+        -heap-size 2048                   \
         -o app.wasm app.go
 
 # Optimize (optional)

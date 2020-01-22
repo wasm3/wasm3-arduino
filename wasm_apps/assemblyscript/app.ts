@@ -1,37 +1,21 @@
-@external("arduino", "millis")
-declare function millis(): u32;
+import * as dev from "./arduino";
 
-@external("arduino", "delay")
-declare function delay(ms: u32): void;
-
-@external("arduino", "pinMode")
-declare function pinMode(pin: u32, mode: u32): void;
-
-@external("arduino", "digitalWrite")
-declare function digitalWrite(pin: u32, value: u32): void;
-
-@external("arduino", "getPinLED")
-declare function getPinLED(): u32;
-
-const LOW: u32  = 0;
-const HIGH: u32 = 1;
-
-const INPUT: u32        = 0x0;
-const OUTPUT: u32       = 0x1;
-const INPUT_PULLUP: u32 = 0x2;
-
-let LED: u32 = 0;
+let LED: u32 = dev.getPinLED();
 
 function setup(): void {
-  LED = getPinLED();
-  pinMode(LED, OUTPUT);
+  dev.pinMode(LED, dev.OUTPUT);
+
+  dev.print('Hello from AssemblyScript 😊\n');
 }
 
 function run(): void {
-  digitalWrite(LED, HIGH);
-  delay(100);
-  digitalWrite(LED, LOW);
-  delay(900);
+  const t: u32 = dev.millis();
+  dev.println('[' + t.toString() + '] ' + 'Тест юнікоду.');
+
+  dev.digitalWrite(LED, dev.HIGH);
+  dev.delay(100);
+  dev.digitalWrite(LED, dev.LOW);
+  dev.delay(900);
 }
 
 /*
@@ -41,3 +25,4 @@ export function _start(): void {
   setup();
   while (1) run();
 }
+

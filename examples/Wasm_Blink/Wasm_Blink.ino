@@ -114,7 +114,6 @@ m3ApiRawFunction(m3_arduino_digitalWrite)
     m3ApiSuccess();
 }
 
-// This is a convenience function
 m3ApiRawFunction(m3_arduino_getPinLED)
 {
     m3ApiReturnType (uint32_t)
@@ -122,7 +121,22 @@ m3ApiRawFunction(m3_arduino_getPinLED)
     m3ApiReturn(LED_PIN);
 }
 
-// Dummy, for TinyGO
+m3ApiRawFunction(m3_arduino_print)
+{
+    m3ApiGetArgMem(const char *, out)
+    m3ApiGetArg(int32_t, out_len)
+
+    //printf("api: print %p\n", out);
+
+    char buff[out_len+1];
+    memcpy(buff, out, out_len);
+    buff[out_len] = '\0';
+
+    Serial.print(buff);
+
+    m3ApiSuccess();
+}
+
 m3ApiRawFunction(m3_dummy)
 {
     m3ApiSuccess();
@@ -138,8 +152,11 @@ M3Result  LinkArduino  (IM3Runtime runtime)
     m3_LinkRawFunction (module, arduino, "pinMode",          "v(ii)",  &m3_arduino_pinMode);
     m3_LinkRawFunction (module, arduino, "digitalWrite",     "v(ii)",  &m3_arduino_digitalWrite);
 
+    // Convenience functions
+    m3_LinkRawFunction (module, arduino, "print",            "v(*i)",  &m3_arduino_print);
     m3_LinkRawFunction (module, arduino, "getPinLED",        "i()",    &m3_arduino_getPinLED);
 
+    // Dummy (for TinyGo)
     m3_LinkRawFunction (module, "env",   "io_get_stdout",    "i()",    &m3_dummy);
 
     return m3Err_none;
@@ -212,3 +229,4 @@ void loop()
 {
     delay(100);
 }
+

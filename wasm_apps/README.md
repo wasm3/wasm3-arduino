@@ -8,7 +8,6 @@ See `build.sh` for details.
 
 ## Rust app
 
-For Rust, the LED pin is currently hardcoded in the app.  
 Before building the app, please install the toolchain:
 ```sh
 rustup target add wasm32-unknown-unknown
@@ -25,7 +24,6 @@ To rebuild, use `npm run build`.
 
 ## TinyGo app
 
-For TinyGo, the LED pin is currently hardcoded in the app.  
 To rebuild, use `build.sh`.  
 When using TinyGo, be sure to change the main function from `_start` to `cwa_main`.
 

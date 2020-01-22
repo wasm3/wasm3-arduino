@@ -17,7 +17,7 @@
 #define NATIVE_STACK_SIZE   (32*1024)
 
 // For (most) devices that cannot allocate a 64KiB wasm page
-#define WASM_MEMORY_LIMIT   2048
+#define WASM_MEMORY_LIMIT   4096
 
 /*
  * WebAssembly app

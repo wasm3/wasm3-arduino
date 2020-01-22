@@ -4,6 +4,6 @@
     "asbuild:optimized": "npx asc app.ts -b app.wasm -t app.wat -O3z --runtime half --noAssert --use abort="
   },
   "devDependencies": {
-    "assemblyscript": "^0.8.1-nightly.20200120"
+    "assemblyscript": "0.8.1-nightly.20200120"
   }
 }

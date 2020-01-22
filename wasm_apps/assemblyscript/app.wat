@@ -1,8 +1,8 @@
 (module
- (type $FUNCSIG$i (func (result i32)))
- (type $FUNCSIG$v (func))
- (type $FUNCSIG$vii (func (param i32 i32)))
- (type $FUNCSIG$vi (func (param i32)))
+ (type $none_=>_none (func))
+ (type $i32_i32_=>_none (func (param i32 i32)))
+ (type $i32_=>_none (func (param i32)))
+ (type $none_=>_i32 (func (result i32)))
  (import "arduino" "getPinLED" (func $arduino/getPinLED (result i32)))
  (import "arduino" "pinMode" (func $arduino/pinMode (param i32 i32)))
  (import "arduino" "digitalWrite" (func $arduino/digitalWrite (param i32 i32)))
@@ -11,12 +11,12 @@
  (global $app/LED (mut i32) (i32.const 0))
  (export "memory" (memory $0))
  (export "_start" (func $app/_start))
- (start $start)
- (func $app/_start (; 4 ;) (type $FUNCSIG$v)
+ (start $~start)
+ (func $app/_start (; 4 ;)
   global.get $app/LED
   i32.const 1
   call $arduino/pinMode
-  loop $continue|0
+  loop $while-continue|0
    global.get $app/LED
    i32.const 1
    call $arduino/digitalWrite
@@ -27,15 +27,12 @@
    call $arduino/digitalWrite
    i32.const 900
    call $arduino/delay
-   br $continue|0
+   br $while-continue|0
   end
   unreachable
  )
- (func $start (; 5 ;) (type $FUNCSIG$v)
+ (func $~start (; 5 ;)
   call $arduino/getPinLED
   global.set $app/LED
- )
- (func $null (; 6 ;) (type $FUNCSIG$v)
-  nop
  )
 )

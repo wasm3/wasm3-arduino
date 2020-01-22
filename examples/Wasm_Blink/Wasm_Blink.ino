@@ -201,9 +201,17 @@ void wasm_task(void*)
     const char* i_argv[1] = { NULL };
     result = m3_CallWithArgs (f, 0, i_argv);
 
-    if (result) FATAL("CallWithArgs", result);
-
     // Should not arrive here
+
+    if (result) {
+        M3ErrorInfo info;
+        m3_GetErrorInfo (runtime, &info);
+        Serial.print("Error: ");
+        Serial.print(result);
+        Serial.print(" (");
+        Serial.print(info.message);
+        Serial.println(")");
+    }
 }
 
 void setup()

@@ -471,6 +471,8 @@ _           (Compile_Function (function));
                 function = NULL;
         }
 _       (m3_Call(function));
+
+		io_module->startFunction = -1;
     }
 
     _catch: return result;
@@ -494,8 +496,7 @@ _       (InitElements (io_module));
         io_module->next = io_runtime->modules;
         io_runtime->modules = io_module;
 
-        // Functions expect module to be linked to a runtime, so we call start here
-_       (InitStartFunc (io_module));
+        // Start func will be called when first function call is attempted
     }
     else result = m3Err_moduleAlreadyLinked;
 
@@ -544,6 +545,13 @@ M3Result  m3_FindFunction  (IM3Function * o_function, IM3Runtime i_runtime, cons
     }
     else result = ErrorModule (m3Err_functionLookupFailed, i_runtime->modules, "'%s'", i_functionName);
 
+    // Check if start function needs to be called
+    if (function and function->module->startFunction) {
+        result = InitStartFunc (function->module);
+        if (result)
+            return result;
+    }
+
     * o_function = function;
 
     return result;
@@ -567,7 +575,7 @@ M3Result  m3_CallWithArgs  (IM3Function i_function, uint32_t i_argc, const char 
         IM3Runtime runtime = module->runtime;
         runtime->argc = i_argc;
         runtime->argv = i_argv;
-        if (strcmp (i_function->name, "_start") == 0) // WASI
+        if (i_function->name and strcmp (i_function->name, "_start") == 0) // WASI
             i_argc = 0;
 
         IM3FuncType ftype = i_function->funcType;

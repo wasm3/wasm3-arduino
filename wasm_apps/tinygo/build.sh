@@ -1,15 +1,15 @@
 # Prepare
-export PATH=$PATH:/usr/local/tinygo/bin
+export PATH=/usr/local/tinygo/bin:$PATH
 export GOROOT=/opt/go
 
 # Compile
 tinygo  build -target wasm                \
         -panic trap -wasm-abi generic     \
-        -heap-size 2048                   \
+        -heap-size 81920                  \
         -o app.wasm app.go
 
 # Optimize (optional)
-#wasm-opt -O3 app.wasm -o app.wasm
+wasm-opt -Os app.wasm -o app.wasm
 wasm-strip app.wasm
 
 # Convert to WAT

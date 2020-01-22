@@ -19,10 +19,9 @@ To rebuild, use `build.sh`.
 
 Before building the app, please install npm dependencies:
 ```sh
-yarn install
-# or: npm install
+npm install    # or yarn install
 ```
-To rebuild, use `npm run build` or `build.sh`.
+To rebuild, use `npm run build`.
 
 ## TinyGo app
 

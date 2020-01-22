@@ -10,15 +10,15 @@ struct App {
 
 impl App {
     fn new() -> Self {
-        let led = get_pin_led();
-        pin_mode(led, OUTPUT);
+        let led = getPinLED();
+        pinMode(led, OUTPUT);
         Self { led }
     }
 
-    fn update(&self) {
-        digital_write(self.led, HIGH);
+    fn run(&self) {
+        digitalWrite(self.led, HIGH);
         delay(100);
-        digital_write(self.led, LOW);
+        digitalWrite(self.led, LOW);
         delay(900);
     }
 }
@@ -26,5 +26,7 @@ impl App {
 #[no_mangle]
 pub extern fn _start() {
     let app = App::new();
-    loop { app.update() };
+    loop {
+        app.run()
+    }
 }

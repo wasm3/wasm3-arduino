@@ -1,7 +1,3 @@
-
-# Prepare
-#rustup target add wasm32-unknown-unknown
-
 # Compile
 rustc -O --crate-type=cdylib              \
       --target=wasm32-unknown-unknown     \
@@ -10,7 +6,7 @@ rustc -O --crate-type=cdylib              \
       -o app.wasm app.rs
 
 # Optimize (optional)
-#wasm-opt -O3 app.wasm -o app.wasm
+wasm-opt -O3 app.wasm -o app.wasm
 wasm-strip app.wasm
 
 # Convert to WAT

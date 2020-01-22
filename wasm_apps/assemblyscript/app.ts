@@ -1,6 +1,6 @@
 import * as dev from "./arduino";
 
-let LED: u32 = dev.getPinLED();
+let LED = dev.getPinLED();
 
 function setup(): void {
   dev.pinMode(LED, dev.OUTPUT);
@@ -18,6 +18,8 @@ function run(): void {
  */
 export function _start(): void {
   setup();
-  while (1) run();
+  while (1) {
+    run();
+  }
 }
 

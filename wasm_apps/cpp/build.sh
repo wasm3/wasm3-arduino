@@ -6,7 +6,7 @@ wasicc  -Os                                                   \
         -o app.wasm app.cpp
 
 # Optimize (optional)
-#wasm-opt -O3 app.wasm -o app.wasm
+wasm-opt -O3 app.wasm -o app.wasm
 wasm-strip app.wasm
 
 # Convert to WAT

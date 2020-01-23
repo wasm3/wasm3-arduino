@@ -20,13 +20,16 @@
 #define NATIVE_STACK_SIZE   (32*1024)
 
 // For (most) devices that cannot allocate a 64KiB wasm page
-//#define WASM_MEMORY_LIMIT   4096
+#define WASM_MEMORY_LIMIT   4096
 
 /*
  * WebAssembly app
  */
 
-#include "../wasm_apps/assemblyscript/app.wasm.h"
+#include "../wasm_apps/cpp/app.wasm.h"
+//#include "../wasm_apps/assemblyscript/app.wasm.h"
+//#include "../wasm_apps/rust/app.wasm.h"
+//#include "../wasm_apps/tinygo/app.wasm.h"
 
 /*
  * API bindings

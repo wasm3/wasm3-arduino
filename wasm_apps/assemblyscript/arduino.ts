@@ -15,10 +15,10 @@ export declare function getPinLED(): u32;
 declare function _print(ptr: usize): void;
 
 export function print(str: string): void {
-  _print(changetype<usize>(String.UTF8.encode(str, true)))
+  _print(changetype<usize>(String.UTF8.encode(str, true)));
 }
 
 export function println(str: string): void {
-  print(str + '\n')
+  print(str + '\n');
 }
 

@@ -5,11 +5,13 @@ mod arduino;
 use arduino::*;
 
 struct App {
-  led: u32,
+    led: u32,
 }
 
 impl App {
     fn new() -> Self {
+        println("Rust is running");
+
         let led = getPinLED();
         pinMode(led, OUTPUT);
         Self { led }

@@ -5,7 +5,7 @@ mod arduino;
 use arduino::*;
 
 struct App {
-  led: u32,
+    led: u32,
 }
 
 impl App {

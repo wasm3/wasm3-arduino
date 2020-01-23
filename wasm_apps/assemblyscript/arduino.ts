@@ -11,14 +11,3 @@ export declare function pinMode(pin: u32, mode: u32): void;
 export declare function digitalWrite(pin: u32, value: u32): void;
 export declare function getPinLED(): u32;
 
-@external("print")
-declare function _print(ptr: usize): void;
-
-export function print(str: string): void {
-  _print(changetype<usize>(String.UTF8.encode(str, true)));
-}
-
-export function println(str: string): void {
-  print(str + '\n');
-}
-

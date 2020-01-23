@@ -14,7 +14,7 @@ wasm-opt -Os app.wasm -o app.wasm
 wasm-strip app.wasm
 
 # Convert to WAT
-#wasm2wat app.wasm -o app.wat
+#wasm2wat --generate-names app.wasm -o app.wat
 
 # Convert to C header
 xxd -i app.wasm > app.wasm.h

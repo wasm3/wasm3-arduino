@@ -22,4 +22,3 @@ export function _start(): void {
     run();
   }
 }
-

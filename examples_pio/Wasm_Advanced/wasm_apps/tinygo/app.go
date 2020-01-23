@@ -46,7 +46,8 @@ func print(s string)
 func _getGreeting(buf *byte, maxlen uint)
 
 func println(s string) {
-    print(s + "\n")
+    print(s)
+    print("\n")
 }
 
 func getGreeting() string {
@@ -77,8 +78,8 @@ func setup() {
 }
 
 func loop() {
-    t := millis()
-    println(strconv.FormatUint(uint64(t), 10))
+    time := millis()
+    println(strconv.FormatUint(uint64(time), 10))
 
     digitalWrite(LED, HIGH)
     delay(100)

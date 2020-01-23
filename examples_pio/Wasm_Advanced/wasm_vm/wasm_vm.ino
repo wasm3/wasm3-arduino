@@ -14,7 +14,9 @@
  */
 
 // Redefine the default LED pin here, if needed
-//#define LED_PIN             13
+#ifndef LED_PIN
+#define LED_PIN             LED_BUILTIN
+#endif
 
 #define WASM_STACK_SLOTS    2048
 #define NATIVE_STACK_SIZE   (32*1024)

@@ -10,8 +10,8 @@ function setup(): void {
 }
 
 function run(): void {
-  const t = dev.millis();
-  dev.println(t.toString());
+  const time = dev.millis();
+  dev.println(time.toString());
 
   dev.digitalWrite(LED, dev.HIGH);
   dev.delay(100);

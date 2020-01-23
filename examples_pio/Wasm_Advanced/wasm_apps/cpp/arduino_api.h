@@ -24,6 +24,22 @@ WASM_IMPORT("arduino", "digitalWrite")    void digitalWrite   (uint32_t pin, uin
 
 // This is a convenience function
 WASM_IMPORT("arduino", "getPinLED")       uint32_t getPinLED  (void);
+WASM_IMPORT("arduino", "getGreeting")     void getGreeting    (char* buff, size_t maxlen);
+WASM_IMPORT("arduino", "print")           void print          (const char* s, size_t len);
+
+static inline size_t strlen(const char *str) {
+  const char *s;
+  for (s = str; *s; ++s);
+  return (s - str);
+}
+
+static inline void print (const char* s) {
+  print(s, strlen(s));
+}
+
+static inline void println (const char* s) {
+  print(s); print("\n");
+}
 
 }
 

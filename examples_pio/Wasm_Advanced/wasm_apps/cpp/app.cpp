@@ -4,10 +4,17 @@
 int LED_BUILTIN;
 
 void setup() {
+  println("C++ is running");
+
   LED_BUILTIN = getPinLED();
 
   // initialize digital pin LED_BUILTIN as an output.
   pinMode(LED_BUILTIN, OUTPUT);
+
+  print("Greeting: ");
+  char greeting[64];
+  getGreeting(greeting, sizeof(greeting));
+  println(greeting);
 }
 
 // the loop function runs over and over again forever

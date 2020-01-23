@@ -22,7 +22,7 @@
 #define NATIVE_STACK_SIZE   (32*1024)
 
 // For (most) devices that cannot allocate a 64KiB wasm page
-#define WASM_MEMORY_LIMIT   4096
+//#define WASM_MEMORY_LIMIT   4096
 
 /*
  * WebAssembly app
@@ -105,30 +105,22 @@ m3ApiRawFunction(m3_arduino_getPinLED)
 
 m3ApiRawFunction(m3_arduino_print)
 {
-    m3ApiGetArgMem(const char *, buff)
+    m3ApiGetArgMem  (const uint8_t *, buf)
+    m3ApiGetArg     (uint32_t,        len)
 
-    //printf("api: print %p\n", out);
-    Serial.print(buff);
+    //printf("api: print %p %d\n", buf, len);
+    Serial.write(buf, len);
 
     m3ApiSuccess();
 }
 
-m3ApiRawFunction(m3_arduino_getString)
+m3ApiRawFunction(m3_arduino_getGreeting)
 {
-    m3ApiGetArgMem(char *, out)
-    m3ApiGetArg(int32_t, out_len)
+    m3ApiGetArgMem  (uint8_t *,    out)
+    m3ApiGetArg     (int32_t,      out_len)
 
-    const char buff[] = "Тест юнікоду!";
+    const char buff[] = "Hello WASM world! 😊";
     memcpy(out, buff, min(sizeof(buff), out_len));
-
-    m3ApiSuccess();
-}
-
-m3ApiRawFunction(m3_arduino_testCallback)
-{
-    m3ApiGetArg(int32_t, func)
-
-    printf("api: testCallback %d\n", func);
 
     m3ApiSuccess();
 }
@@ -148,13 +140,10 @@ M3Result  LinkArduino  (IM3Runtime runtime)
     m3_LinkRawFunction (module, arduino, "pinMode",          "v(ii)",  &m3_arduino_pinMode);
     m3_LinkRawFunction (module, arduino, "digitalWrite",     "v(ii)",  &m3_arduino_digitalWrite);
 
-    // Convenience functions
+    // Test functions
     m3_LinkRawFunction (module, arduino, "getPinLED",        "i()",    &m3_arduino_getPinLED);
-    m3_LinkRawFunction (module, arduino, "print",            "v(*)",   &m3_arduino_print);
-
-    // Tests
-    m3_LinkRawFunction (module, arduino, "getString",        "v(*i)",  &m3_arduino_getString);
-    m3_LinkRawFunction (module, arduino, "testCallback",     "v(i)",   &m3_arduino_testCallback);
+    m3_LinkRawFunction (module, arduino, "getGreeting",      "v(*i)",  &m3_arduino_getGreeting);
+    m3_LinkRawFunction (module, arduino, "print",            "v(*i)",  &m3_arduino_print);
 
     // Dummy (for TinyGo)
     m3_LinkRawFunction (module, "env",   "io_get_stdout",    "i()",    &m3_dummy);
@@ -193,7 +182,13 @@ void wasm_task(void*)
     if (result) FATAL("LinkArduino", result);
 
     IM3Function f;
-    result = m3_FindFunction (&f, runtime, "_start");
+    // Check for TinyGo entry function first
+    // See https://github.com/tinygo-org/tinygo/issues/866
+    result = m3_FindFunction (&f, runtime, "cwa_main");
+    if (result) {
+        result = m3_FindFunction (&f, runtime, "_start");
+    }
+
     if (result) FATAL("FindFunction", result);
 
     Serial.println("Running WebAssembly...");

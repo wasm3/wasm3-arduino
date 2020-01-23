@@ -18,16 +18,16 @@ declare function _getGreeting(ptr: usize, maxlen: usize): void;
 declare function _print(ptr: usize, len: usize): void;
 
 export function print(str: string): void {
-  const buff = String.UTF8.encode(str)
-  _print(changetype<usize>(buff), buff.byteLength)
+  const buffer = String.UTF8.encode(str);
+  _print(changetype<usize>(buffer), buffer.byteLength);
 }
 
 export function println(str: string): void {
-  print(str + '\n')
+  print(str + '\n');
 }
 
 export function getGreeting(): string {
-  const arr = new ArrayBuffer(64)
-  _getGreeting(changetype<usize>(arr), 64)
-  return String.UTF8.decode(arr, true)
+  const arr = new ArrayBuffer(64);
+  _getGreeting(changetype<usize>(arr), 64);
+  return String.UTF8.decode(arr, true);
 }

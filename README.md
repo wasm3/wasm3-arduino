@@ -8,11 +8,11 @@ This library can be used with
 [`Particle`](https://build.particle.io/libs/Wasm3/latest/tab/example/Wasm_Blink.ino).
 
 ## Supported devices
-The library was verified to work with:
 
+Wasm3 requires at least **~64Kb** Flash and **~10Kb** RAM even for minimal functionality.
+
+The library was verified to work with:  
 `ESP8266`, `ESP32`, `Arduino 101`, `MKR1000`, `RTL8711`, `ST Nucleo WB55RG`, `BluePill`, `Particle Photon`, `Particle Electron`, `nRF51`, `nRF52`, `Teensy 3.1/3.2`, `Teensy 4.0`
-
-**Note:** it requires at least **~64Kb** Flash and **~10Kb** RAM even for minimal functionality.
 
 ## Disclaimer
 

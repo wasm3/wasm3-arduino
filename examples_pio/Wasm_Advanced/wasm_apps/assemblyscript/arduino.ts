@@ -12,25 +12,20 @@ export declare function pinMode(pin: u32, mode: u32): void;
 export declare function digitalWrite(pin: u32, value: u32): void;
 export declare function getPinLED(): u32;
 
-@external("print")        declare function _print(ptr: usize): void;
-@external("getString")    declare function _getString(ptr: usize, len: i32): void;
+@external("getGreeting")  declare function _getGreeting(ptr: usize, maxlen: usize): void;
+@external("print")        declare function _print(ptr: usize, len: usize): void;
 
 export function print(str: string): void {
-  _print(changetype<usize>(String.UTF8.encode(str, true)))
+  const buff = String.UTF8.encode(str)
+  _print(changetype<usize>(buff), buff.byteLength)
 }
 
 export function println(str: string): void {
   print(str + '\n')
 }
 
-export function getString(): string {
+export function getGreeting(): string {
   const arr = new ArrayBuffer(64)
-  _getString(changetype<usize>(arr), 64)
+  _getGreeting(changetype<usize>(arr), 64)
   return String.UTF8.decode(arr, true)
 }
-
-/*
-type testFunc = ((size: usize) => usize) | null;
-
-export declare function testCallback(f: testFunc): void;
-*/

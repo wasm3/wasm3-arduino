@@ -2,22 +2,16 @@ import * as dev from "./arduino";
 
 let LED = dev.getPinLED();
 
-function cbk(size: usize): usize {
-  dev.println("!CBK!");
-  return 123;
-}
-
 function setup(): void {
   dev.pinMode(LED, dev.OUTPUT);
 
-  dev.print('Hello from AssemblyScript 😊\n');
+  dev.println('AssemblyScript is running')
+  dev.print('Greeting: ' + dev.getGreeting() + '\n');
 }
 
 function run(): void {
   const t = dev.millis();
-  dev.println('[' + t.toString() + '] ' + dev.getString());
-
-  //dev.testCallback(cbk);
+  dev.println(t.toString());
 
   dev.digitalWrite(LED, dev.HIGH);
   dev.delay(100);
@@ -34,4 +28,3 @@ export function _start(): void {
     run();
   }
 }
-

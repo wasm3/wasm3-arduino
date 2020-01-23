@@ -6,6 +6,9 @@
 
 #include <wasm3.h>
 
+#include <m3_api_defs.h>
+#include <m3_env.h>
+
 /*
  * Configuration
  */
@@ -56,9 +59,6 @@ unsigned int app_wasm_len = 197;
  *   m3ApiSuccess()     - Returns void (and no traps)
  *   m3ApiTrap(trap)    - Returns a trap
  */
-
-#include <m3_api_defs.h>
-#include <m3_env.h>
 
 m3ApiRawFunction(m3_arduino_millis)
 {

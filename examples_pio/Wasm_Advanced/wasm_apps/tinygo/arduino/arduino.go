@@ -38,8 +38,8 @@ func Print(s string)
 func _getGreeting(buf *byte, maxlen uint)
 
 func Println(s string) {
-    print(s)
-    print("\n")
+    Print(s)
+    Print("\n")
 }
 
 func GetGreeting() string {

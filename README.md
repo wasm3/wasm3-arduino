@@ -12,7 +12,9 @@ This library can be used with
 Wasm3 requires at least **~64Kb** Flash and **~10Kb** RAM even for minimal functionality.
 
 The library was verified to work with:  
-`ESP32`, `ESP8266`, `Arduino MKR`, `Particle`, `RTL8711`, `ST Nucleo WB55RG`, `BluePill`, `Nordic nRF5`, `Teensy`, ... [see full list](https://github.com/wasm3/wasm3/blob/master/docs/Hardware.md)
+`ESP32`, `ESP8266`, `Arduino MKR`, `Particle`,  
+`RTL8711`, `ST Nucleo WB55RG`, `BluePill`,  
+`Nordic nRF5`, `Teensy`, ... [see full list](https://github.com/wasm3/wasm3/blob/master/docs/Hardware.md)
 
 ## Disclaimer
 

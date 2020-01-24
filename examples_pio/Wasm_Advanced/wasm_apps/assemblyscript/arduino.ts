@@ -23,7 +23,8 @@ export function print(str: string): void {
 }
 
 export function println(str: string): void {
-  print(str + '\n');
+  print(str);
+  print('\n');
 }
 
 export function getGreeting(): string {

@@ -10,7 +10,7 @@ var LED = GetPinLED()
 func setup() {
     PinMode(LED, 1)
 
-    Println("TinyGo is running")
+    Println("TinyGo is running 😎")
     Println("Greeting: " + GetGreeting())
 }
 

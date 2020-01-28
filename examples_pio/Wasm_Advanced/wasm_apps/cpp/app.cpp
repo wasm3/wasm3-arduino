@@ -4,7 +4,7 @@
 int LED_BUILTIN;
 
 void setup() {
-  println("C++ is running");
+  println("C++ is running 😎");
 
   LED_BUILTIN = getPinLED();
 

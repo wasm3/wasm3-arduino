@@ -10,7 +10,7 @@ struct App {
 
 impl App {
     fn new() -> Self {
-        println("Rust is running");
+        println("Rust is running 😎");
 
         let led = getPinLED();
         pinMode(led, OUTPUT);

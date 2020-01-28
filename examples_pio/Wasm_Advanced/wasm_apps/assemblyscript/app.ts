@@ -5,7 +5,7 @@ let LED = dev.getPinLED();
 function setup(): void {
   dev.pinMode(LED, dev.OUTPUT);
 
-  dev.println('AssemblyScript is running')
+  dev.println('AssemblyScript is running 😎')
   dev.print('Greeting: ' + dev.getGreeting() + '\n');
 }
 

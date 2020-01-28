@@ -1,9 +1,6 @@
 # Compile
-rustc -O --crate-type=cdylib              \
-      --target=wasm32-unknown-unknown     \
-      -C link-arg=-zstack-size=2048       \
-      -C link-arg=-s                      \
-      -o app.wasm app.rs
+cargo build --release
+cp ./target/wasm32-unknown-unknown/release/app.wasm ./
 
 # Optimize (optional)
 wasm-opt -O3 app.wasm -o app.wasm

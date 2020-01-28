@@ -1,5 +1,5 @@
-#![feature(core_intrinsics)]
 #![no_std]
+#![feature(core_intrinsics)]
 
 mod arduino;
 use arduino::*;

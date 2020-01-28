@@ -1,0 +1,21 @@
+[package]
+name = "app"
+version = "0.1.0"
+authors = ["Volodymyr Shymanskyy <vshymanskyi@gmail.com>"]
+edition = "2018"
+
+[lib]
+path = "src/app.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+codegen-units = 1
+lto = true
+#debug = true

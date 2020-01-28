@@ -48,27 +48,34 @@ i16  GetStackTopIndex  (IM3Compilation o)
 }
 
 
+u8  GetStackTopTypeAtOffset  (IM3Compilation o, u16 i_offset)
+{
+    u8 type = c_m3Type_none;
+    
+    ++i_offset;
+    if (o->stackIndex >= i_offset)
+        type = o->typeStack [o->stackIndex - i_offset];
+    
+    return type;
+}
+
+
 u8  GetStackTopType  (IM3Compilation o)
 {
-    u8 type = c_m3Type_none;
-
-    if (o->stackIndex)
-        type = o->typeStack [o->stackIndex - 1];
-
-    return type;
+    return GetStackTopTypeAtOffset (o, 0);
 }
 
 
-u8  GetStackType  (IM3Compilation o, u16 i_offset)
+u8  GetStackBottomType  (IM3Compilation o, u16 i_offset)
 {
     u8 type = c_m3Type_none;
-
-    ++i_offset;
-    if (o->stackIndex > i_offset)
-        type = o->typeStack [o->stackIndex - i_offset];
-
+    
+    if (i_offset < o->stackIndex)
+        type = o->typeStack [i_offset];
+    
     return type;
 }
+
 
 
 u8  GetBlockType  (IM3Compilation o)
@@ -82,17 +89,6 @@ bool  BlockHasType  (IM3Compilation o)
     return GetBlockType (o) != c_m3Type_none;
 }
 
-
-bool  IsStackTopTypeInt  (IM3Compilation o)
-{
-    return IsIntType (GetStackTopType (o));
-}
-
-
-bool  IsStackTopTypeFp  (IM3Compilation o)
-{
-    return IsFpType (GetStackTopType (o));
-}
 
 i16  GetNumBlockValues  (IM3Compilation o)
 {
@@ -599,12 +595,15 @@ M3Result  PreservedCopyTopSlot  (IM3Compilation o, u16 i_destSlot, u16 i_preserv
 
     IM3Operation op;
 
+    u8 type = GetStackTopType (o);
+    
     if (IsStackTopInRegister (o))
     {
-        bool isFp = IsStackTopTypeFp (o);
-        op = isFp ? op_PreserveSetSlot_f64 : op_PreserveSetSlot_i64;
+        const IM3Operation c_preserveSetSlot [] = { NULL, op_PreserveSetSlot_i32, op_PreserveSetSlot_i64, op_PreserveSetSlot_f32, op_PreserveSetSlot_f64 };
+        
+        op = c_preserveSetSlot [type];
     }
-    else op = op_PreserveCopySlot_64;
+    else op = Is64BitType (type) ? op_PreserveCopySlot_64 : op_PreserveCopySlot_32;
 
 _   (EmitOp (o, op));
     EmitSlotOffset (o, i_destSlot);
@@ -663,22 +662,22 @@ M3Result  ReturnStackTop  (IM3Compilation o)
 
 
 // if local is unreferenced, o_preservedSlotIndex will be equal to localIndex on return
-M3Result  FindReferencedLocalsWithCurrentBlock  (IM3Compilation o, u16 * o_preservedSlotIndex, u32 i_localIndex)
+M3Result  FindReferencedLocalWithinCurrentBlock  (IM3Compilation o, u16 * o_preservedSlotIndex, u32 i_localIndex)
 {
     M3Result result = m3Err_none;
 
-	IM3CompilationScope scope = & o->block;
-	i16 startIndex = scope->initStackIndex;
+    IM3CompilationScope scope = & o->block;
+    i16 startIndex = scope->initStackIndex;
 
-	while (scope->opcode == c_waOp_block)
-	{
-		scope = scope->outer;
-		if (not scope)
-			break;
+    while (scope->opcode == c_waOp_block)
+    {
+        scope = scope->outer;
+        if (not scope)
+            break;
 
-		startIndex = scope->initStackIndex;
-	}
-	
+        startIndex = scope->initStackIndex;
+    }
+    
     * o_preservedSlotIndex = (u16) i_localIndex;
 
     for (u32 i = startIndex; i < o->stackIndex; ++i)
@@ -802,8 +801,7 @@ _   (EmitOp (o, op_Return));
 }
 
 
-// todo: else maps to nop now.
-M3Result  Compile_Else_End  (IM3Compilation o, u8 i_opcode)
+M3Result  Compile_End  (IM3Compilation o, u8 i_opcode)
 {
     M3Result result = m3Err_none;
 
@@ -856,7 +854,7 @@ _   (ReadLEB_u32 (& localSlot, & o->wasm, o->wasmEnd));             //  printf (
     if (localSlot < GetFunctionNumArgsAndLocals (o->function))
     {
         u16 preserveSlot;
-_       (FindReferencedLocalsWithCurrentBlock (o, & preserveSlot, localSlot));  // preserve will be different than local, if referenced
+_       (FindReferencedLocalWithinCurrentBlock (o, & preserveSlot, localSlot));  // preserve will be different than local, if referenced
 
         if (preserveSlot == localSlot)
 _           (CopyTopSlot (o, localSlot))
@@ -906,16 +904,20 @@ M3Result  Compile_SetGlobal  (IM3Compilation o, M3Global * i_global)
     if (i_global->isMutable)
     {
         IM3Operation op;
+        u8 type = GetStackTopType (o);
 
         if (IsStackTopInRegister (o))
-            op = IsStackTopTypeFp (o) ? op_SetGlobal_f64 : op_SetGlobal_i;
-        else
-            op = op_SetGlobal_s;
+        {
+            const IM3Operation c_setGlobalOps [] = { NULL, op_SetGlobal_i32, op_SetGlobal_i64, op_SetGlobal_f32, op_SetGlobal_f64 };
+
+            op = c_setGlobalOps [type];
+        }
+        else op = Is64BitType (type) ? op_SetGlobal_s64 : op_SetGlobal_s32;
 
 _      (EmitOp (o, op));
         EmitPointer (o, & i_global->intValue);
 
-        if (op == op_SetGlobal_s)
+        if (IsStackTopInSlot (o))
             EmitSlotOffset (o, GetStackTopSlotIndex (o));
 
 _      (Pop (o));
@@ -1289,11 +1291,11 @@ M3Result  PreserveArgsAndLocals  (IM3Compilation o)
         for (u32 i = 0; i < numArgsAndLocals; ++i)
         {
             u16 preservedSlotIndex;
-_           (FindReferencedLocalsWithCurrentBlock (o, & preservedSlotIndex, i));
+_           (FindReferencedLocalWithinCurrentBlock (o, & preservedSlotIndex, i));
             
             if (preservedSlotIndex != i)
             {
-                u8 type = GetStackType (o, i);
+                u8 type = GetStackBottomType (o, i);
                 IM3Operation op = Is64BitType (type) ? op_CopySlot_64 : op_CopySlot_32;
                 
                 EmitOp          (o, op);
@@ -1402,13 +1404,11 @@ M3Result  Compile_Select  (IM3Compilation o, u8 i_opcode)
                                                             { op_Select_f32_rss, op_Select_f32_rrs, op_Select_f32_rsr } },      // selector in reg
                                                           { { op_Select_f64_sss, op_Select_f64_srs, op_Select_f64_ssr },        // selector in slot
                                                             { op_Select_f64_rss, op_Select_f64_rrs, op_Select_f64_rsr } } };    // selector in reg
-
-
     M3Result result = m3Err_none;
 
     u16 slots [3] = { c_slotUnused, c_slotUnused, c_slotUnused };
 
-    u8 type = GetStackType (o, 1); // get type of selection
+    u8 type = GetStackTopTypeAtOffset (o, 1); // get type of selection
 
     IM3Operation op = NULL;
 
@@ -1627,13 +1627,14 @@ _   (Compile_Operator (o, i_opcode));
 }
 
 
-#define d_singleOp(OP)                      { op_##OP, NULL, NULL, NULL }       // these aren't actually used by the compiler, just codepage decoding
-#define d_emptyOpList()                     { NULL, NULL, NULL, NULL }
-#define d_unaryOpList(TYPE, NAME)           { op_##TYPE##_##NAME##_r, op_##TYPE##_##NAME##_s, NULL, NULL }
-#define d_binOpList(TYPE, NAME)             { op_##TYPE##_##NAME##_sr, op_##TYPE##_##NAME##_rs, op_##TYPE##_##NAME##_ss, NULL }
-#define d_storeFpOpList(TYPE, NAME)         { op_##TYPE##_##NAME##_sr, op_##TYPE##_##NAME##_rs, op_##TYPE##_##NAME##_ss, op_##TYPE##_##NAME##_rr }
-#define d_commutativeBinOpList(TYPE, NAME)  { op_##TYPE##_##NAME##_sr, NULL, op_##TYPE##_##NAME##_ss, NULL }
-#define d_convertOpList(OP)                 { op_##OP##_r_r, op_##OP##_r_s, op_##OP##_s_r, op_##OP##_s_s }
+// d_singleOp macros aren't actually used by the compiler, just codepage decoding
+#define d_singleOp(OP)                      { op_##OP,                  NULL,                       NULL,                       NULL }
+#define d_emptyOpList()                     { NULL,                     NULL,                       NULL,                       NULL }
+#define d_unaryOpList(TYPE, NAME)           { op_##TYPE##_##NAME##_r,   op_##TYPE##_##NAME##_s,     NULL,                       NULL }
+#define d_binOpList(TYPE, NAME)             { op_##TYPE##_##NAME##_rs,  op_##TYPE##_##NAME##_sr,    op_##TYPE##_##NAME##_ss,    NULL }
+#define d_storeFpOpList(TYPE, NAME)         { op_##TYPE##_##NAME##_rs,  op_##TYPE##_##NAME##_sr,    op_##TYPE##_##NAME##_ss,    op_##TYPE##_##NAME##_rr }
+#define d_commutativeBinOpList(TYPE, NAME)  { op_##TYPE##_##NAME##_rs,  NULL,                       op_##TYPE##_##NAME##_ss,    NULL }
+#define d_convertOpList(OP)                 { op_##OP##_r_r,            op_##OP##_r_s,              op_##OP##_s_r,              op_##OP##_s_s }
 
 
 const M3OpInfo c_operations [] =
@@ -1643,11 +1644,11 @@ const M3OpInfo c_operations [] =
     M3OP( "block",               0, none,   d_emptyOpList(),                    Compile_LoopOrBlock ),  // 0x02
     M3OP( "loop",                0, none,   d_singleOp (Loop),                  Compile_LoopOrBlock ),  // 0x03
     M3OP( "if",                 -1, none,   d_emptyOpList(),                    Compile_If ),           // 0x04
-    M3OP( "else",                0, none,   d_emptyOpList(),                    Compile_Else_End ),     // 0x05
+    M3OP( "else",                0, none,   d_emptyOpList(),                    Compile_Nop ),          // 0x05
 
     M3OP_RESERVED, M3OP_RESERVED, M3OP_RESERVED, M3OP_RESERVED, M3OP_RESERVED,                          // 0x06 - 0x0a
 
-    M3OP( "end",                 0, none,   d_emptyOpList(),                    Compile_Else_End ),     // 0x0b
+    M3OP( "end",                 0, none,   d_emptyOpList(),                    Compile_End ),          // 0x0b
     M3OP( "br",                  0, none,   d_singleOp (Branch),                Compile_Branch ),       // 0x0c
     M3OP( "br_if",              -1, none,   { op_BranchIf_r, op_BranchIf_s },   Compile_Branch ),       // 0x0d
     M3OP( "br_table",           -1, none,   d_singleOp (BranchTable),           Compile_BranchTable ),  // 0x0e
@@ -1669,7 +1670,7 @@ const M3OpInfo c_operations [] =
     M3OP( "local.set",          1,  none,   d_emptyOpList(),                    Compile_SetLocal ),     // 0x21
     M3OP( "local.tee",          0,  any,    d_emptyOpList(),                    Compile_SetLocal ),     // 0x22
     M3OP( "global.get",         1,  none,   d_singleOp (GetGlobal),             Compile_GetSetGlobal ), // 0x23
-    M3OP( "global.set",         1,  none,   { op_SetGlobal_i, op_SetGlobal_s }, Compile_GetSetGlobal ), // 0x24
+    M3OP( "global.set",         1,  none,   d_emptyOpList(),                    Compile_GetSetGlobal ), // 0x24
 
     M3OP_RESERVED,  M3OP_RESERVED, M3OP_RESERVED,                                                       // 0x25 - 0x27
 
@@ -1853,21 +1854,32 @@ const M3OpInfo c_operations [] =
     M3OP( "f32.reinterpret/i32", 0, f_32,   d_convertOpList (f32_Reinterpret_i32),  Compile_Convert ),  // 0xbe
     M3OP( "f64.reinterpret/i64", 0, f_64,   d_convertOpList (f64_Reinterpret_i64),  Compile_Convert ),  // 0xbf
 
+// instr ::= ...
+//         | 0xC0                  =>  i32.extend8_s
+//         | 0xC1                  =>  i32.extend16_s
+//         | 0xC2                  =>  i64.extend8_s
+//         | 0xC3                  =>  i64.extend16_s
+//         | 0xC4                  =>  i64.extend32_s
+//
+    M3OP( "i32.extend8_s",       0,  i_32,   d_unaryOpList (i32, Extend8_s)          ),                 // 0xc0
+    M3OP( "i32.extend16_s",      0,  i_32,   d_unaryOpList (i32, Extend16_s)         ),                 // 0xc1
+    M3OP( "i64.extend8_s",       0,  i_64,   d_unaryOpList (i64, Extend8_s)          ),                 // 0xc2
+    M3OP( "i64.extend16_s",      0,  i_64,   d_unaryOpList (i64, Extend16_s)         ),                 // 0xc3
+    M3OP( "i64.extend32_s",      0,  i_64,   d_unaryOpList (i64, Extend32_s)         ),                 // 0xc4
+
 # ifdef DEBUG // for codepage logging:
 #   define d_m3DebugOp(OP) M3OP (#OP, 0, none, { op_##OP })
+#   define d_m3DebugTypedOp(OP) M3OP (#OP, 0, none, { op_##OP##_i32, op_##OP##_i64, op_##OP##_f32, op_##OP##_f64, })
 
     d_m3DebugOp (Const),            d_m3DebugOp (Entry),                d_m3DebugOp (Compile),
-    d_m3DebugOp (Bridge),           d_m3DebugOp (End),                  d_m3DebugOp (SetGlobal_s),
+    d_m3DebugOp (Bridge),           d_m3DebugOp (End),
 
     d_m3DebugOp (ContinueLoop),     d_m3DebugOp (ContinueLoopIf),
 
-    d_m3DebugOp (CopySlot_32),   //   d_m3DebugOp (PreserveCopySlot_32),
+    d_m3DebugOp (CopySlot_32),      d_m3DebugOp (PreserveCopySlot_32),
     d_m3DebugOp (CopySlot_64),      d_m3DebugOp (PreserveCopySlot_64),
 
-    d_m3DebugOp (SetRegister_i32),  d_m3DebugOp (i32_BranchIf_rs),  d_m3DebugOp (SetSlot_i32),
-    d_m3DebugOp (SetRegister_i64),  d_m3DebugOp (i32_BranchIf_ss),  d_m3DebugOp (SetSlot_i64),
-    d_m3DebugOp (SetRegister_f32),  d_m3DebugOp (i64_BranchIf_rs),  d_m3DebugOp (SetSlot_f32),
-    d_m3DebugOp (SetRegister_f64),  d_m3DebugOp (i64_BranchIf_ss),  d_m3DebugOp (SetSlot_f64),
+    d_m3DebugOp (i32_BranchIf_rs),  d_m3DebugOp (i32_BranchIf_ss),  d_m3DebugOp (i64_BranchIf_rs),  d_m3DebugOp (i64_BranchIf_ss),
 
     d_m3DebugOp (Select_i32_rss),   d_m3DebugOp (Select_i32_srs),   d_m3DebugOp (Select_i32_ssr),   d_m3DebugOp (Select_i32_sss),
     d_m3DebugOp (Select_i64_rss),   d_m3DebugOp (Select_i64_srs),   d_m3DebugOp (Select_i64_ssr),   d_m3DebugOp (Select_i64_sss),
@@ -1877,6 +1889,10 @@ const M3OpInfo c_operations [] =
 
     d_m3DebugOp (Select_f64_sss),   d_m3DebugOp (Select_f64_srs),   d_m3DebugOp (Select_f64_ssr),
     d_m3DebugOp (Select_f64_rss),   d_m3DebugOp (Select_f64_rrs),   d_m3DebugOp (Select_f64_rsr),
+
+    d_m3DebugTypedOp (SetGlobal),   d_m3DebugOp (SetGlobal_s32),    d_m3DebugOp (SetGlobal_s64),
+    
+    d_m3DebugTypedOp (SetRegister), d_m3DebugTypedOp (SetSlot),     d_m3DebugTypedOp (PreserveSetSlot),
 
 # endif
 

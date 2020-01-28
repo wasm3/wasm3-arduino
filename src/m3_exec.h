@@ -12,6 +12,17 @@
 // but it might prove useful to be able to compile m3_exec alone w/ optimizations while the remaining
 // code is at debug O0
 
+
+// About the naming convention of these operations/macros (_rs, _sr_, _ss, _srs, etc.)
+//------------------------------------------------------------------------------------------------------
+//   - 'r' means register and 's' means slot
+//   - the first letter is the top of the stack
+//
+//  so, for example, _rs means the first operand (the first thing pushed to the stack) is in a slot
+//  and the second operand (the top of the stack) is in a register
+//------------------------------------------------------------------------------------------------------
+
+
 #include "m3_exec_defs.h"
 #include "m3_math_utils.h"
 
@@ -63,7 +74,7 @@ d_m3RetSig  Call  (d_m3OpSig)
 // TODO: OK, this needs some explanation here ;0
 
 #define d_m3CommutativeOpMacro(RES, REG, TYPE, NAME, OP, ...) \
-d_m3Op(TYPE##_##NAME##_sr)                              \
+d_m3Op(TYPE##_##NAME##_rs)                              \
 {                                                       \
     TYPE operand = slot (TYPE);                         \
     OP((RES), operand, ((TYPE) REG), ##__VA_ARGS__);    \
@@ -71,14 +82,14 @@ d_m3Op(TYPE##_##NAME##_sr)                              \
 }                                                       \
 d_m3Op(TYPE##_##NAME##_ss)                              \
 {                                                       \
-    TYPE operandB = slot (TYPE);                        \
-    TYPE operandA = slot (TYPE);                        \
-    OP((RES), operandA, operandB, ##__VA_ARGS__);       \
+    TYPE operand2 = slot (TYPE);                        \
+    TYPE operand1 = slot (TYPE);                        \
+    OP((RES), operand1, operand2, ##__VA_ARGS__);       \
     return nextOp ();                                   \
 }
 
 #define d_m3OpMacro(RES, REG, TYPE, NAME, OP, ...)      \
-d_m3Op(TYPE##_##NAME##_rs)                              \
+d_m3Op(TYPE##_##NAME##_sr)                              \
 {                                                       \
     TYPE operand = slot (TYPE);                         \
     OP((RES), ((TYPE) REG), operand, ##__VA_ARGS__);    \
@@ -236,6 +247,18 @@ d_m3UnaryOp_i (u64, Popcnt, __builtin_popcountll)
 
 d_m3UnaryOp_i (i32, Wrap_i64, OP_WRAP_I64)
 
+// Integer sign extension operations
+#define OP_EXTEND8_S_I32(X)  ((int32_t)(int8_t)(X))
+#define OP_EXTEND16_S_I32(X) ((int32_t)(int16_t)(X))
+#define OP_EXTEND8_S_I64(X)  ((int64_t)(int8_t)(X))
+#define OP_EXTEND16_S_I64(X) ((int64_t)(int16_t)(X))
+#define OP_EXTEND32_S_I64(X) ((int64_t)(int32_t)(X))
+
+d_m3UnaryOp_i (i32, Extend8_s,  OP_EXTEND8_S_I32)
+d_m3UnaryOp_i (i32, Extend16_s, OP_EXTEND16_S_I32)
+d_m3UnaryOp_i (i64, Extend8_s,  OP_EXTEND8_S_I64)
+d_m3UnaryOp_i (i64, Extend16_s, OP_EXTEND16_S_I64)
+d_m3UnaryOp_i (i64, Extend32_s, OP_EXTEND32_S_I64)
 
 #define d_m3TruncMacro(DEST, SRC, TYPE, NAME, FROM, OP, ...)   \
 d_m3Op(TYPE##_##NAME##_##FROM##_r_r)                \
@@ -610,13 +633,23 @@ d_m3Op  (End)
 
 
 d_m3OpDecl  (GetGlobal)
-d_m3OpDecl  (SetGlobal_i)
+d_m3OpDecl  (SetGlobal_i32)
+d_m3OpDecl  (SetGlobal_i64)
 
 
-d_m3Op  (SetGlobal_s)
+d_m3Op  (SetGlobal_s32)
 {
-    i64 * global = immediate (i64 *);
-    * global = slot (i64);
+    u32 * global = immediate (u32 *);
+    * global = slot (u32);
+
+    return nextOp ();
+}
+
+
+d_m3Op  (SetGlobal_s64)
+{
+    u64 * global = immediate (u64 *);
+    * global = slot (u64);
 
     return nextOp ();
 }
@@ -641,20 +674,10 @@ d_m3Op  (SetGlobal_f64)
 
 
 d_m3OpDecl (CopySlot_32)
+d_m3OpDecl (PreserveCopySlot_32)
+
 d_m3OpDecl (CopySlot_64)
-
-
-d_m3Op (PreserveCopySlot_64)
-{
-    u64 * dest      = slot_ptr (u64);
-    u64 * src       = slot_ptr (u64);
-    u64 * preserve  = slot_ptr (u64);
-
-    * preserve = * dest;
-    * dest = * src;
-
-    return nextOp ();
-}
+d_m3OpDecl (PreserveCopySlot_64)
 
 #define d_m3SetRegisterSetSlotDecl(TYPE)    \
                                             \
@@ -743,7 +766,7 @@ d_m3Load_i (i64, u32);
 d_m3Load_i (i64, i64);
 
 #define d_m3Store(REG, SRC_TYPE, DEST_TYPE)             \
-d_m3Op  (SRC_TYPE##_Store_##DEST_TYPE##_sr)             \
+d_m3Op  (SRC_TYPE##_Store_##DEST_TYPE##_rs)             \
 {                                                       \
     u64 operand = slot (u32);                           \
     u32 offset = immediate (u32);                       \
@@ -758,7 +781,7 @@ d_m3Op  (SRC_TYPE##_Store_##DEST_TYPE##_sr)             \
         return nextOp ();                               \
     } else d_outOfBounds;                               \
 }                                                       \
-d_m3Op  (SRC_TYPE##_Store_##DEST_TYPE##_rs)             \
+d_m3Op  (SRC_TYPE##_Store_##DEST_TYPE##_sr)             \
 {                                                       \
     SRC_TYPE value = slot (SRC_TYPE);                   \
     u64 operand = (u32) _r0;                            \

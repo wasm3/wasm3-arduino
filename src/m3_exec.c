@@ -237,10 +237,19 @@ d_m3OpDef  (GetGlobal)
 }
 
 
-d_m3OpDef  (SetGlobal_i)
+d_m3OpDef  (SetGlobal_i32)
 {
-    i64 * global = immediate (i64 *);
-    * global = _r0;                         //  printf ("set global: %p %" PRIi64 "\n", global, _r0);
+    u32 * global = immediate (u32 *);
+    * global = (u32) _r0;                         //  printf ("set global: %p %" PRIi64 "\n", global, _r0);
+
+    return nextOp ();
+}
+
+
+d_m3OpDef  (SetGlobal_i64)
+{
+    u64 * global = immediate (u64 *);
+    * global = (u64) _r0;                         //  printf ("set global: %p %" PRIi64 "\n", global, _r0);
 
     return nextOp ();
 }
@@ -346,6 +355,19 @@ d_m3OpDef (CopySlot_32)
 }
 
 
+d_m3OpDef (PreserveCopySlot_32)
+{
+    u32 * dest      = slot_ptr (u32);
+    u32 * src       = slot_ptr (u32);
+    u32 * preserve  = slot_ptr (u32);
+    
+    * preserve = * dest;
+    * dest = * src;
+
+    return nextOp ();
+}
+
+
 d_m3OpDef (CopySlot_64)
 {
     u64 * dst = slot_ptr (u64);
@@ -356,6 +378,18 @@ d_m3OpDef (CopySlot_64)
     return nextOp ();
 }
 
+
+d_m3OpDef (PreserveCopySlot_64)
+{
+    u64 * dest      = slot_ptr (u64);
+    u64 * src       = slot_ptr (u64);
+    u64 * preserve  = slot_ptr (u64);
+    
+    * preserve = * dest;
+    * dest = * src;
+    
+    return nextOp ();
+}
 
 
 #if d_m3RuntimeStackDumps

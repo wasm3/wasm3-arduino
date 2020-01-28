@@ -125,11 +125,10 @@ m3ApiRawFunction(m3_arduino_getPinLED)
 
 m3ApiRawFunction(m3_arduino_print)
 {
-    m3ApiGetArgMem(const char *, buff)
+    m3ApiGetArgMem  (const uint8_t *, buf)
+    m3ApiGetArg     (uint32_t,        len)
 
-    //printf("api: print %p\n", out);
-    Serial.print(buff);
-
+    Serial.write(buf, len);
     m3ApiSuccess();
 }
 
@@ -148,9 +147,9 @@ M3Result  LinkArduino  (IM3Runtime runtime)
     m3_LinkRawFunction (module, arduino, "pinMode",          "v(ii)",  &m3_arduino_pinMode);
     m3_LinkRawFunction (module, arduino, "digitalWrite",     "v(ii)",  &m3_arduino_digitalWrite);
 
-    // Convenience functions
+    // Test functions
     m3_LinkRawFunction (module, arduino, "getPinLED",        "i()",    &m3_arduino_getPinLED);
-    m3_LinkRawFunction (module, arduino, "print",            "v(*)",   &m3_arduino_print);
+    m3_LinkRawFunction (module, arduino, "print",            "v(*i)",  &m3_arduino_print);
 
     // Dummy (for TinyGo)
     m3_LinkRawFunction (module, "env",   "io_get_stdout",    "i()",    &m3_dummy);
@@ -189,7 +188,13 @@ void wasm_task(void*)
     if (result) FATAL("LinkArduino", result);
 
     IM3Function f;
-    result = m3_FindFunction (&f, runtime, "_start");
+    // Check for TinyGo entry function first
+    // See https://github.com/tinygo-org/tinygo/issues/866
+    result = m3_FindFunction (&f, runtime, "cwa_main");
+    if (result) {
+        result = m3_FindFunction (&f, runtime, "_start");
+    }
+
     if (result) FATAL("FindFunction", result);
 
     Serial.println("Running WebAssembly...");

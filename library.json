@@ -21,5 +21,8 @@
   },
   "homepage": "https://github.com/wasm3/wasm3",
   "frameworks": "*",
-  "platforms": "*"
+  "platforms": "*",
+  "build": {
+    "libArchive": false
+  }
 }

@@ -17,9 +17,15 @@
 #include "wasm3.h"
 #include "m3_config.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+# if defined(__cplusplus)
+#   define d_m3BeginExternC     extern "C" {
+#   define d_m3EndExternC       }
+# else
+#   define d_m3BeginExternC
+#   define d_m3EndExternC
+# endif
+
+d_m3BeginExternC
 
 #if !defined(d_m3ShortTypesDefined)
 typedef double          f64;
@@ -41,8 +47,17 @@ typedef const char * const      ccstr_t;
 typedef const u8 *              bytes_t;
 typedef const u8 * const        cbytes_t;
 
+typedef u16                     m3opcode_t;
+
 typedef i64                     m3reg_t;
-typedef u64 *                   m3stack_t;
+
+# if d_m3Use32BitSlots
+typedef u32                     m3slot_t;
+# else
+typedef u64                     m3slot_t;
+# endif
+
+typedef m3slot_t *              m3stack_t;
 
 typedef
 const void * const  cvptr_t;
@@ -113,7 +128,7 @@ const void * const  cvptr_t;
 # endif
 
 
-# ifdef DEBUG
+# if (defined(DEBUG) || defined(ASSERTS)) && !defined(NASSERTS)
 #   define d_m3Assert(ASS)      assert (ASS)
 # else
 #   define d_m3Assert(ASS)
@@ -144,16 +159,15 @@ typedef struct M3CodePageHeader
 M3CodePageHeader;
 
 
-#define d_m3CodePageFreeLinesThreshold      4       // max is probably: select _sss
+#define d_m3CodePageFreeLinesThreshold      4+2       // max is: select _sss & CallIndirect + 2 for bridge
 
 #define d_m3MemPageSize                     65536
 
-#define d_m3Reg0SlotAlias                   d_m3MaxFunctionStackHeight + 1
-#define d_m3Fp0SlotAlias                    d_m3MaxFunctionStackHeight + 2
-
-#define d_m3MaxNumFunctionConstants         60
+#define d_m3Reg0SlotAlias                   30000
+#define d_m3Fp0SlotAlias                    30001
 
 #define d_m3MaxSaneUtf8Length               2000
+#define d_m3MaxSaneFunctionArgCount         1000    // still insane, but whatever
 
 #define d_externalKind_function             0
 #define d_externalKind_table                1
@@ -163,10 +177,6 @@ M3CodePageHeader;
 static const char * const c_waTypes []          = { "nil", "i32", "i64", "f32", "f64", "void", "void *" };
 static const char * const c_waCompactTypes []   = { "0", "i", "I", "f", "F", "v", "*" };
 
-
-#define m3Alloc(OPTR, STRUCT, NUM)              m3Malloc ((void **) OPTR, sizeof (STRUCT) * (NUM))
-#define m3RellocArray(PTR, STRUCT, NEW, OLD)    m3Realloc ((PTR), sizeof (STRUCT) * (NEW), sizeof (STRUCT) * (OLD))
-#define m3Free(P)                               { m3Free_impl((void*)(P)); P = NULL; }
 
 # if d_m3VerboseLogs
 
@@ -195,11 +205,17 @@ size_t      m3StackGetMax           ();
 #endif
 
 void        m3Abort                 (const char* message);
-void        m3NotImplemented        (void);
 
-M3Result    m3Malloc                (void ** o_ptr, size_t i_size);
-void *      m3Realloc               (void * i_ptr, size_t i_newSize, size_t i_oldSize);
-void        m3Free_impl             (void * o_ptr);
+M3Result    m3_Malloc                (void ** o_ptr, size_t i_size);
+M3Result    m3_Realloc               (void ** io_ptr, size_t i_newSize, size_t i_oldSize);
+void        m3_Free                  (void ** io_ptr);
+M3Result    m3_CopyMem               (void ** o_to, const void * i_from, size_t i_size);
+
+#define m3Alloc(OPTR, STRUCT, NUM)                  m3_Malloc ((void **) OPTR, sizeof (STRUCT) * (NUM))
+#define m3ReallocArray(PTR, STRUCT, NEW, OLD)       m3_Realloc ((void **) (PTR), sizeof (STRUCT) * (NEW), sizeof (STRUCT) * (OLD))
+#define m3Reallocate(_ptr, _newSize, _oldSize)      m3_Realloc ((void **) _ptr, _newSize, _oldSize)
+#define m3Free(P)                                   m3_Free ((void **)(& P));
+#define m3CopyMem(_to, _from, _size)                m3_CopyMem ((void **) _to, (void *) _from, _size)
 
 M3Result    NormalizeType           (u8 * o_type, i8 i_convolutedWasmType);
 
@@ -227,8 +243,6 @@ size_t      SPrintArg               (char * o_string, size_t i_n, m3stack_t i_sp
 
 void        ReportError             (IM3Runtime io_runtime, IM3Module i_module, IM3Function i_function, ccstr_t i_errorMessage, ccstr_t i_file, u32 i_lineNum);
 
-#if defined(__cplusplus)
-}
-#endif
+d_m3EndExternC
 
 #endif // m3_core_h

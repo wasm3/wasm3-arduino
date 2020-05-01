@@ -16,30 +16,34 @@ IM3CodePage  NewCodePage  (u32 i_minNumLines)
     u32 pageSize = sizeof (M3CodePageHeader) + sizeof (code_t) * i_minNumLines;
 
     pageSize = (pageSize + (d_m3CodePageAlignSize-1)) & ~(d_m3CodePageAlignSize-1); // align
-    m3Malloc ((void **) & page, pageSize);
+    m3Alloc ((void **) & page, u8, pageSize);
 
     if (page)
     {
         page->info.sequence = ++s_sequence;
         page->info.numLines = (pageSize - sizeof (M3CodePageHeader)) / sizeof (code_t);
 
-        m3log (emit, "new page: %p; seq: %d; bytes: %d; lines: %d", GetPagePC (page), page->info.sequence, pageSize, page->info.numLines);
+        m3log (runtime, "new page: %p; seq: %d; bytes: %d; lines: %d", GetPagePC (page), page->info.sequence, pageSize, page->info.numLines);
     }
 
     return page;
 }
 
 
-void  FreeCodePages  (IM3CodePage i_page)
+void  FreeCodePages  (IM3CodePage * io_list)
 {
-    while (i_page)
-    {
-        m3log (code, "free page: %d  util: %3.1f%%", i_page->info.sequence, 100. * i_page->info.lineIndex / i_page->info.numLines);
+    IM3CodePage page = * io_list;
 
-        IM3CodePage next = i_page->info.next;
-        m3Free (i_page);
-        i_page = next;
+    while (page)
+    {
+        m3log (code, "free page: %d; %p; util: %3.1f%%", page->info.sequence, page, 100. * page->info.lineIndex / page->info.numLines);
+
+        IM3CodePage next = page->info.next;
+        m3Free (page);
+        page = next;
     }
+
+    * io_list = NULL;
 }
 
 
@@ -53,13 +57,25 @@ u32  NumFreeLines  (IM3CodePage i_page)
 
 void  EmitWord_impl  (IM3CodePage i_page, void * i_word)
 {                                                                       d_m3Assert (i_page->info.lineIndex+1 <= i_page->info.numLines);
-    i_page->code [i_page->info.lineIndex++] = (void *) i_word;
+    i_page->code [i_page->info.lineIndex++] = i_word;
 }
 
-void  EmitWord64_impl  (IM3CodePage i_page, const u64 i_word)
-{                                                                       d_m3Assert (i_page->info.lineIndex+2 <= i_page->info.numLines);
-    *((u64 *) & i_page->code [i_page->info.lineIndex]) = i_word;
+void  EmitWord32  (IM3CodePage i_page, const u32 i_word)
+{                                                                       d_m3Assert (i_page->info.lineIndex+1 <= i_page->info.numLines);
+    * ((u32 *) & i_page->code [i_page->info.lineIndex++]) = i_word;
+}
+
+void  EmitWord64  (IM3CodePage i_page, const u64 i_word)
+{
+#if M3_SIZEOF_PTR == 4
+                                                                        d_m3Assert (i_page->info.lineIndex+2 <= i_page->info.numLines);
+    * ((u64 *) & i_page->code [i_page->info.lineIndex]) = i_word;
     i_page->info.lineIndex += 2;
+#else
+                                                                        d_m3Assert (i_page->info.lineIndex+1 <= i_page->info.numLines);
+    * ((u64 *) & i_page->code [i_page->info.lineIndex]) = i_word;
+    i_page->info.lineIndex += 1;
+#endif
 }
 
 
@@ -93,4 +109,37 @@ IM3CodePage  PopCodePage  (IM3CodePage * i_list)
     page->info.next = NULL;
 
     return page;
+}
+
+
+
+u32  FindCodePageEnd  (IM3CodePage i_list, IM3CodePage * o_end)
+{
+    u32 numPages = 0;
+    * o_end = NULL;
+
+    while (i_list)
+    {
+        * o_end = i_list;
+        ++numPages;
+        i_list = i_list->info.next;
+    }
+
+    return numPages;
+}
+
+
+u32  CountCodePages  (IM3CodePage i_list)
+{
+    IM3CodePage unused;
+    return FindCodePageEnd (i_list, & unused);
+}
+
+
+IM3CodePage GetEndCodePage  (IM3CodePage i_list)
+{
+    IM3CodePage end;
+    FindCodePageEnd (i_list, & end);
+
+    return end;
 }

@@ -11,9 +11,7 @@
 #include "m3_code.h"
 #include "m3_exec_defs.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+d_m3BeginExternC
 
 enum
 {
@@ -56,15 +54,15 @@ typedef struct M3CompilationScope
 //    i32                             loopDepth;
     i16                             initStackIndex;
     u8                              type;
-    u8                              opcode;
+    m3opcode_t                      opcode;
     bool                            isPolymorphic;
 }
 M3CompilationScope;
 
 typedef M3CompilationScope *        IM3CompilationScope;
 
-
-static const u16 c_m3RegisterUnallocated = 0;
+// double the slot count when using 32-bit slots, since every wasm stack element could be a 64-bit type
+//static const u16 c_m3MaxFunctionSlots = d_m3MaxFunctionStackHeight * (d_m3Use32BitSlots + 1);
 
 typedef struct
 {
@@ -85,32 +83,35 @@ typedef struct
     u32                 numEmits;
     u32                 numOpcodes;
 
-    u16                 firstSlotIndex;             // numArgs + numLocals + numReservedConstants. the first mutable slot available to the compiler.
+    u16                 firstDynamicStackIndex;
     u16                 stackIndex;                 // current stack index
 
     u16                 firstConstSlotIndex;
-    u16                 constSlotIndex;             // as const's are encountered during compilation this tracks their location in the "real" stack
+    u16                 maxConstSlotIndex;             // as const's are encountered during compilation this tracks their location in the "real" stack
 
-    u64                 constants                   [d_m3MaxNumFunctionConstants];
+    u16                 firstLocalSlotIndex;
+    u16                 firstDynamicSlotIndex;      // numArgs + numLocals + numReservedConstants. the first mutable slot available to the compiler.
 
-    // 'wasmStack' is unused for args/locals. for the dynamic portion of the stack, 'wasmStack' holds slot locations
+    m3slot_t            constants                   [d_m3MaxConstantTableSize];
+
+    // 'wasmStack' holds slot locations
     u16                 wasmStack                   [d_m3MaxFunctionStackHeight];
     u8                  typeStack                   [d_m3MaxFunctionStackHeight];
 
     // 'm3Slots' contains allocation usage counts
-    u8                  m3Slots                     [d_m3MaxFunctionStackHeight];
+    u8                  m3Slots                     [d_m3MaxFunctionSlots];
 
-    u16                 numAllocatedExecSlots;
+    u16                 maxAllocatedSlotPlusOne;
 
     u16                 regStackIndexPlusOne        [2];
 
-    u8                  previousOpcode;
+    m3opcode_t          previousOpcode;
 }
 M3Compilation;
 
 typedef M3Compilation *                 IM3Compilation;
 
-typedef M3Result (* M3Compiler)         (IM3Compilation, u8);
+typedef M3Result (* M3Compiler)         (IM3Compilation, m3opcode_t);
 
 
 //-----------------------------------------------------------------------------------------------------------------------------------
@@ -136,6 +137,16 @@ M3OpInfo;
 typedef const M3OpInfo *    IM3OpInfo;
 
 extern const M3OpInfo c_operations [];
+extern const M3OpInfo c_operationsFC [];
+
+static inline
+const M3OpInfo* GetOpInfo(m3opcode_t opcode) {
+    switch (opcode >> 8) {
+    case 0x00: return &c_operations[opcode];
+    case 0xFC: return &c_operationsFC[opcode & 0xFF];
+    default:   return NULL;
+    }
+}
 
 #ifdef DEBUG
     #define M3OP(...)       { __VA_ARGS__ }
@@ -147,6 +158,9 @@ extern const M3OpInfo c_operations [];
 
 //-----------------------------------------------------------------------------------------------------------------------------------
 
+u16         GetTypeNumSlots             (u8 i_type);
+void        AlignSlotIndexToType        (u16 * io_slotIndex, u8 i_type);
+
 bool        IsRegisterAllocated         (IM3Compilation o, u32 i_register);
 bool        IsRegisterLocation          (i16 i_location);
 bool        IsFpRegisterLocation        (i16 i_location);
@@ -154,21 +168,13 @@ bool        IsIntRegisterLocation       (i16 i_location);
 
 bool        IsStackPolymorphic          (IM3Compilation o);
 
-M3Result    EmitOp                      (IM3Compilation o, IM3Operation i_operation);
-void        EmitConstant                (IM3Compilation o, const u64 immediate);
-M3Result    Push                        (IM3Compilation o, u8 i_waType, i16 i_location);
-void        EmitPointer                 (IM3Compilation o, const void * const i_immediate);
-
 M3Result    CompileBlock                (IM3Compilation io, u8 i_blockType, u8 i_blockOpcode);
 
 M3Result    Compile_BlockStatements     (IM3Compilation io);
 M3Result    Compile_Function            (IM3Function io_function);
 
-bool        PeekNextOpcode              (IM3Compilation o, u8 i_opcode);
-u16         GetMaxExecSlot              (IM3Compilation o);
+u16         GetMaxUsedSlotPlusOne       (IM3Compilation o);
 
-#if defined(__cplusplus)
-}
-#endif
+d_m3EndExternC
 
 #endif // m3_compile_h

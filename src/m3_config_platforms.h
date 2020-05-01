@@ -18,9 +18,6 @@
 #define M3_CONCAT__(a,b) a##b
 #define M3_CONCAT(a,b)   M3_CONCAT__(a,b)
 
-// Post-increment by a specific number
-#define M3_INC(x,n) (((x)+=(n))-(n))
-
 # if !defined(__cplusplus)
 #   define not      !
 #   define and      &&
@@ -46,38 +43,35 @@
 # if defined(M3_COMPILER_CLANG) || defined(M3_COMPILER_GCC)
 #  if defined(__wasm__)
 #   define M3_ARCH "wasm"
+
 #  elif defined(__x86_64__)
 #   define M3_ARCH "x86_64"
+
 #  elif defined(__i386__)
 #   define M3_ARCH "x86"
+
 #  elif defined(__aarch64__)
 #   define M3_ARCH "arm64-v8a"
+
 #  elif defined(__arm__)
 #   if defined(__ARM_ARCH_7A__)
 #    if defined(__ARM_NEON__)
 #     if defined(__ARM_PCS_VFP)
-#      define M3_ARCH "armeabi-v7a/NEON (hard-float)"
+#      define M3_ARCH "arm-v7a/NEON hard-float"
 #     else
-#      define M3_ARCH "armeabi-v7a/NEON"
+#      define M3_ARCH "arm-v7a/NEON"
 #     endif
 #    else
 #     if defined(__ARM_PCS_VFP)
-#      define M3_ARCH "armeabi-v7a (hard-float)"
+#      define M3_ARCH "arm-v7a hard-float"
 #     else
-#      define M3_ARCH "armeabi-v7a"
+#      define M3_ARCH "arm-v7a"
 #     endif
 #    endif
 #   else
-#    define M3_ARCH "armeabi"
+#    define M3_ARCH "arm"
 #   endif
-#  elif defined(__mips64)
-#   define M3_ARCH "mips64"
-#  elif defined(__mips__)
-#   define M3_ARCH "mips"
-#  elif defined(__xtensa__)
-#   define M3_ARCH "xtensa"
-#  elif defined(__arc__)
-#   define M3_ARCH "arc32"
+
 #  elif defined(__riscv)
 #   if defined(__riscv_32e)
 #    define _M3_ARCH_RV "rv32e"
@@ -114,12 +108,55 @@
 #    define _M3_ARCH_RV_C _M3_ARCH_RV_D
 #   endif
 #   define M3_ARCH _M3_ARCH_RV_C
+
+#  elif defined(__mips__)
+#   if defined(__MIPSEB__) && defined(__mips64)
+#    define M3_ARCH "mips64 " _MIPS_ARCH
+#   elif defined(__MIPSEL__) && defined(__mips64)
+#    define M3_ARCH "mips64el " _MIPS_ARCH
+#   elif defined(__MIPSEB__)
+#    define M3_ARCH "mips " _MIPS_ARCH
+#   elif defined(__MIPSEL__)
+#    define M3_ARCH "mipsel " _MIPS_ARCH
+#   endif
+
+#  elif defined(__PPC__)
+#   if defined(__PPC64__) && defined(__LITTLE_ENDIAN__)
+#    define M3_ARCH "ppc64le"
+#   elif defined(__PPC64__)
+#    define M3_ARCH "ppc64"
+#   else
+#    define M3_ARCH "ppc"
+#   endif
+
+#  elif defined(__sparc__)
+#   if defined(__arch64__)
+#    define M3_ARCH "sparc64"
+#   else
+#    define M3_ARCH "sparc"
+#   endif
+
+#  elif defined(__s390x__)
+#   define M3_ARCH "s390x"
+
+#  elif defined(__alpha__)
+#   define M3_ARCH "alpha"
+
+#  elif defined(__m68k__)
+#   define M3_ARCH "m68k"
+
+#  elif defined(__xtensa__)
+#   define M3_ARCH "xtensa"
+
+#  elif defined(__arc__)
+#   define M3_ARCH "arc32"
+
 #  elif defined(__AVR__)
 #   define M3_ARCH "avr"
 #  endif
 # endif
 
-#if defined(M3_COMPILER_MSVC)
+# if defined(M3_COMPILER_MSVC)
 #  if defined(_M_X64)
 #   define M3_ARCH "x64"
 #  elif defined(_M_IX86)
@@ -137,7 +174,11 @@
 # endif
 
 # if defined(M3_COMPILER_CLANG)
-#  define M3_COMPILER_VER __VERSION__
+#  if defined(WIN32)
+#   define M3_COMPILER_VER __VERSION__ " for Windows"
+#  else
+#   define M3_COMPILER_VER __VERSION__
+#  endif
 # elif defined(M3_COMPILER_GCC)
 #  define M3_COMPILER_VER "GCC " __VERSION__
 # elif defined(M3_COMPILER_MSVC)
@@ -157,10 +198,48 @@
 #  elif UINTPTR_MAX == 0xFFFFFFFFFFFFFFFFu
 #   define M3_SIZEOF_PTR 8
 #  else
-#   error Pointer size not supported
+#   error "Pointer size not supported"
 #  endif
-# else
+# elif defined(__SIZEOF_POINTER__)
 #  define M3_SIZEOF_PTR __SIZEOF_POINTER__
+#else
+#  error "Pointer size not detected"
+# endif
+
+# if defined(M3_COMPILER_MSVC)
+#  define M3_LITTLE_ENDIAN      //_byteswap_ushort, _byteswap_ulong, _byteswap_uint64
+# elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#  define M3_LITTLE_ENDIAN
+# elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#  define M3_BIG_ENDIAN
+# else
+#  error "Byte order not detected"
+# endif
+
+// Byte swapping (for Big-Endian systems only)
+
+# if defined(M3_BIG_ENDIAN)
+#  define M3_BSWAP_u8(X)  {}
+#  define M3_BSWAP_u16(X) { (X)=__builtin_bswap16((X)); }
+#  define M3_BSWAP_u32(X) { (X)=__builtin_bswap32((X)); }
+#  define M3_BSWAP_u64(X) { (X)=__builtin_bswap64((X)); }
+#  define M3_BSWAP_i8(X)  {}
+#  define M3_BSWAP_i16(X) M3_BSWAP_u16(X)
+#  define M3_BSWAP_i32(X) M3_BSWAP_u32(X)
+#  define M3_BSWAP_i64(X) M3_BSWAP_u64(X)
+#  define M3_BSWAP_f32(X) { union { f32 f; u32 i; } u; u.f = (X); M3_BSWAP_u32(u.i); (X) = u.f; }
+#  define M3_BSWAP_f64(X) { union { f64 f; u64 i; } u; u.f = (X); M3_BSWAP_u64(u.i); (X) = u.f; }
+# else
+#  define M3_BSWAP_u8(X)  {}
+#  define M3_BSWAP_u16(x) {}
+#  define M3_BSWAP_u32(x) {}
+#  define M3_BSWAP_u64(x) {}
+#  define M3_BSWAP_i8(X)  {}
+#  define M3_BSWAP_i16(X) {}
+#  define M3_BSWAP_i32(X) {}
+#  define M3_BSWAP_i64(X) {}
+#  define M3_BSWAP_f32(X) {}
+#  define M3_BSWAP_f64(X) {}
 # endif
 
 # if defined(M3_COMPILER_MSVC)
@@ -178,11 +257,11 @@
 #  define M3_WEAK __attribute__((weak))
 # endif
 
-# ifndef min
-#  define min(A,B) (((A) < (B)) ? (A) : (B))
+# ifndef M3_MIN
+#  define M3_MIN(A,B) (((A) < (B)) ? (A) : (B))
 # endif
-# ifndef max
-#  define max(A,B) (((A) > (B)) ? (A) : (B))
+# ifndef M3_MAX
+#  define M3_MAX(A,B) (((A) > (B)) ? (A) : (B))
 # endif
 
 #define M3_INIT(field) memset(&field, 0, sizeof(field))

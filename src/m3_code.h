@@ -10,9 +10,7 @@
 
 #include "m3_core.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+d_m3BeginExternC
 
 typedef struct M3CodePage
 {
@@ -26,15 +24,20 @@ typedef M3CodePage *    IM3CodePage;
 
 IM3CodePage             NewCodePage             (u32 i_minNumLines);
 
-void                    FreeCodePages           (IM3CodePage i_page);
+void                    FreeCodePages           (IM3CodePage * io_list);
+
 u32                     NumFreeLines            (IM3CodePage i_page);
 pc_t                    GetPageStartPC          (IM3CodePage i_page);
 pc_t                    GetPagePC               (IM3CodePage i_page);
-void                    EmitWord64_impl         (IM3CodePage i_page, u64 i_word);
 void                    EmitWord_impl           (IM3CodePage i_page, void* i_word);
+void                    EmitWord32              (IM3CodePage i_page, u32 i_word);
+void                    EmitWord64              (IM3CodePage i_page, u64 i_word);
 
-void                    PushCodePage            (IM3CodePage * i_list, IM3CodePage i_codePage);
-IM3CodePage             PopCodePage             (IM3CodePage * i_list);
+void                    PushCodePage            (IM3CodePage * io_list, IM3CodePage i_codePage);
+IM3CodePage             PopCodePage             (IM3CodePage * io_list);
+
+IM3CodePage             GetEndCodePage          (IM3CodePage i_list); // i_list = NULL is valid
+u32                     CountCodePages          (IM3CodePage i_list); // i_list = NULL is valid
 
 # ifdef DEBUG
 void                    dump_code_page            (IM3CodePage i_codePage, pc_t i_startPC);
@@ -42,14 +45,6 @@ void                    dump_code_page            (IM3CodePage i_codePage, pc_t 
 
 #define EmitWord(page, val) EmitWord_impl(page, (void*)(val))
 
-#if M3_SIZEOF_PTR == 4
-#  define EmitWord64(page, val) EmitWord64_impl(page, (u64)(val))
-#else
-#  define EmitWord64(page, val) EmitWord_impl(page, (void*)(val))
-#endif
-
-#if defined(__cplusplus)
-}
-#endif
+d_m3EndExternC
 
 #endif // m3_code_h

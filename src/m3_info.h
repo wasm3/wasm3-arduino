@@ -10,9 +10,7 @@
 
 #include "m3_compile.h"
 
-#if defined(__cplusplus)
-extern "C" {
-#endif
+d_m3BeginExternC
 
 #if d_m3LogOutput
 
@@ -21,6 +19,8 @@ void            log_opcode              (IM3Compilation o, u8 i_opcode);
 const char *    get_indention_string    (IM3Compilation o);
 void            emit_stack_dump         (IM3Compilation o);
 void            log_emit                (IM3Compilation o, IM3Operation i_operation);
+
+cstr_t          SPrintFuncTypeSignature (IM3FuncType i_funcType);
 
 #else // d_m3LogOutput
 
@@ -32,8 +32,6 @@ void            log_emit                (IM3Compilation o, IM3Operation i_operat
 
 #endif // d_m3LogOutput
 
-#if defined(__cplusplus)
-}
-#endif
+d_m3EndExternC
 
 #endif // m3_info_h

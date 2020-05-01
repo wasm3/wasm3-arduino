@@ -25,7 +25,7 @@ M3Result  EnsureCodePageNumLines  (IM3Compilation o, u32 i_numLines)
             m3log (emit, "bridging new code page from: %d %p (free slots: %d) to: %d", o->page->info.sequence, GetPC (o), NumFreeLines (o->page), page->info.sequence);
             d_m3Assert (NumFreeLines (o->page) >= 2);
 
-            EmitWord (o->page, op_Bridge);
+            EmitWord (o->page, op_Branch);
             EmitWord (o->page, GetPagePC (page));
 
             ReleaseCodePage (o->runtime, o->page);
@@ -53,9 +53,9 @@ M3Result  EmitOp  (IM3Compilation o, IM3Operation i_operation)
     // it's OK for page to be null; when compile-walking the bytecode without emitting
     if (o->page)
     {
-#   if d_m3RuntimeStackDumps
+# if d_m3EnableOpTracing
         if (i_operation != op_DumpStack)
-#   endif
+# endif
             o->numEmits++;
 
         result = BridgeToNewPageIfNecessary (o);
@@ -70,24 +70,17 @@ M3Result  EmitOp  (IM3Compilation o, IM3Operation i_operation)
 }
 
 
-// this pushes an immediate constant into the M3 codestream
-void  EmitConstant  (IM3Compilation o, const u64 i_immediate)
+// Push an immediate constant into the M3 codestream
+void  EmitConstant32  (IM3Compilation o, const u32 i_immediate)
 {
     if (o->page)
-        EmitWord (o->page, i_immediate);
+        EmitWord32 (o->page, i_immediate);
 }
-
-void  EmitConstant64  (IM3Compilation o, const u64 i_const)
-{
-    if (o->page)
-        EmitWord64 (o->page, i_const);
-}
-
 
 void  EmitSlotOffset  (IM3Compilation o, const i32 i_offset)
 {
     if (o->page)
-        EmitWord (o->page, i_offset);
+        EmitWord32 (o->page, i_offset);
 }
 
 

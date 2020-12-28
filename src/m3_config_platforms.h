@@ -18,7 +18,7 @@
 #define M3_CONCAT__(a,b) a##b
 #define M3_CONCAT(a,b)   M3_CONCAT__(a,b)
 
-# if !defined(__cplusplus)
+# if !defined(__cplusplus) || defined(_MSC_VER)
 #   define not      !
 #   define and      &&
 #   define or       ||
@@ -48,7 +48,7 @@
 #   define M3_ARCH "x86_64"
 
 #  elif defined(__i386__)
-#   define M3_ARCH "x86"
+#   define M3_ARCH "i386"
 
 #  elif defined(__aarch64__)
 #   define M3_ARCH "arm64-v8a"
@@ -158,9 +158,9 @@
 
 # if defined(M3_COMPILER_MSVC)
 #  if defined(_M_X64)
-#   define M3_ARCH "x64"
+#   define M3_ARCH "x86_64"
 #  elif defined(_M_IX86)
-#   define M3_ARCH "x86"
+#   define M3_ARCH "i386"
 #  elif defined(_M_ARM64)
 #   define M3_ARCH "arm64"
 #  elif defined(_M_ARM)
@@ -191,6 +191,18 @@
  * Detect/define features
  */
 
+# ifdef __has_feature
+#  define M3_COMPILER_HAS_FEATURE(x) __has_feature(x)
+# else
+#  define M3_COMPILER_HAS_FEATURE(x) 0
+# endif
+
+# ifdef __has_builtin
+#  define M3_COMPILER_HAS_BUILTIN(x) __has_builtin(x)
+# else
+#  define M3_COMPILER_HAS_BUILTIN(x) 0
+# endif
+
 # if defined(M3_COMPILER_MSVC)
 #  include <stdint.h>
 #  if UINTPTR_MAX == 0xFFFFFFFF
@@ -218,11 +230,57 @@
 
 // Byte swapping (for Big-Endian systems only)
 
+# if defined(M3_COMPILER_MSVC)
+#  define m3_bswap16(x)     _byteswap_ushort((x))
+#  define m3_bswap32(x)     _byteswap_ulong((x))
+#  define m3_bswap64(x)     _byteswap_uint64((x))
+# elif defined(M3_COMPILER_GCC) && ((__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8))
+// __builtin_bswap32/64 added in gcc 4.3, __builtin_bswap16 added in gcc 4.8
+#  define m3_bswap16(x)     __builtin_bswap16((x))
+#  define m3_bswap32(x)     __builtin_bswap32((x))
+#  define m3_bswap64(x)     __builtin_bswap64((x))
+# elif defined(M3_COMPILER_CLANG) && M3_COMPILER_HAS_BUILTIN(__builtin_bswap16)
+#  define m3_bswap16(x)     __builtin_bswap16((x))
+#  define m3_bswap32(x)     __builtin_bswap32((x))
+#  define m3_bswap64(x)     __builtin_bswap64((x))
+# else
+#  include <endian.h>
+#  if defined(__bswap_16)
+#   define m3_bswap16(x)     __bswap_16((x))
+#   define m3_bswap32(x)     __bswap_32((x))
+#   define m3_bswap64(x)     __bswap_64((x))
+#  else
+#   warning "Using naive (probably slow) bswap operations"
+    static inline
+    uint16_t m3_bswap16(uint16_t x) {
+      return ((( x  >> 8 ) & 0xffu ) | (( x  & 0xffu ) << 8 ));
+    }
+    static inline
+    uint32_t m3_bswap32(uint32_t x) {
+      return ((( x & 0xff000000u ) >> 24 ) |
+              (( x & 0x00ff0000u ) >> 8  ) |
+              (( x & 0x0000ff00u ) << 8  ) |
+              (( x & 0x000000ffu ) << 24 ));
+    }
+    static inline
+    uint64_t m3_bswap64(uint64_t x) {
+      return ((( x & 0xff00000000000000ull ) >> 56 ) |
+              (( x & 0x00ff000000000000ull ) >> 40 ) |
+              (( x & 0x0000ff0000000000ull ) >> 24 ) |
+              (( x & 0x000000ff00000000ull ) >> 8  ) |
+              (( x & 0x00000000ff000000ull ) << 8  ) |
+              (( x & 0x0000000000ff0000ull ) << 24 ) |
+              (( x & 0x000000000000ff00ull ) << 40 ) |
+              (( x & 0x00000000000000ffull ) << 56 ));
+    }
+#  endif
+# endif
+
 # if defined(M3_BIG_ENDIAN)
 #  define M3_BSWAP_u8(X)  {}
-#  define M3_BSWAP_u16(X) { (X)=__builtin_bswap16((X)); }
-#  define M3_BSWAP_u32(X) { (X)=__builtin_bswap32((X)); }
-#  define M3_BSWAP_u64(X) { (X)=__builtin_bswap64((X)); }
+#  define M3_BSWAP_u16(X) { (X)=m3_bswap16((X)); }
+#  define M3_BSWAP_u32(X) { (X)=m3_bswap32((X)); }
+#  define M3_BSWAP_u64(X) { (X)=m3_bswap64((X)); }
 #  define M3_BSWAP_i8(X)  {}
 #  define M3_BSWAP_i16(X) M3_BSWAP_u16(X)
 #  define M3_BSWAP_i32(X) M3_BSWAP_u32(X)
@@ -242,17 +300,19 @@
 #  define M3_BSWAP_f64(X) {}
 # endif
 
-# if defined(M3_COMPILER_MSVC)
-#  define UNLIKELY(x) (x)
-#  define LIKELY(x)   (x)
-# else
+# if defined(M3_COMPILER_GCC) || defined(M3_COMPILER_CLANG) || defined(M3_COMPILER_ICC)
 #  define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #  define LIKELY(x)   __builtin_expect(!!(x), 1)
+# else
+#  define UNLIKELY(x) (x)
+#  define LIKELY(x)   (x)
 # endif
 
 
 # if defined(M3_COMPILER_MSVC)
-#  define M3_WEAK
+#  define M3_WEAK //__declspec(selectany)
+# elif defined(__MINGW32__)
+#  define M3_WEAK //__attribute__((selectany))
 # else
 #  define M3_WEAK __attribute__((weak))
 # endif
@@ -345,10 +405,10 @@ typedef int8_t          i8;
 # if defined(ARDUINO) || defined(PARTICLE) || defined(PLATFORMIO) || defined(__MBED__) || \
      defined(ESP8266) || defined(ESP32) || defined(BLUE_PILL) || defined(WM_W600) || defined(FOMU)
 #  ifndef d_m3LogOutput
-#    define d_m3LogOutput                       false
+#    define d_m3LogOutput                       0
 #  endif
 #  ifndef d_m3VerboseLogs
-#    define d_m3VerboseLogs                     false
+#    define d_m3VerboseLogs                     0
 #  endif
 #  ifndef d_m3MaxFunctionStackHeight
 #    define d_m3MaxFunctionStackHeight          64

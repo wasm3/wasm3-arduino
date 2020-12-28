@@ -29,6 +29,18 @@ enum
     c_waOp_teeLocal             = 0x22,
 };
 
+typedef struct M3FuncType
+{
+    struct M3FuncType *     next;
+
+    u32                     numRets;
+    u32                     numArgs;
+    u8                      types[];   	    // returns, then args
+}
+M3FuncType;
+
+typedef M3FuncType *        IM3FuncType;
+
 //-----------------------------------------------------------------------------------------------------------------------------------
 
 // since the end location of a block is unknown when a branch is compiled, writing
@@ -53,7 +65,7 @@ typedef struct M3CompilationScope
     i32                             depth;
 //    i32                             loopDepth;
     i16                             initStackIndex;
-    u8                              type;
+    IM3FuncType                     type;
     m3opcode_t                      opcode;
     bool                            isPolymorphic;
 }
@@ -148,12 +160,27 @@ const M3OpInfo* GetOpInfo(m3opcode_t opcode) {
     }
 }
 
+// TODO: This helper should be removed, when MultiValue is implemented
+static inline
+u8 GetSingleRetType(IM3FuncType ftype) {
+    return (ftype && ftype->numRets) ? ftype->types[0] : c_m3Type_none;
+}
+
 #ifdef DEBUG
     #define M3OP(...)       { __VA_ARGS__ }
     #define M3OP_RESERVED   { "reserved" }
 #else
+    // Strip-off name
     #define M3OP(name, ...) { __VA_ARGS__ }
     #define M3OP_RESERVED   { 0 }
+#endif
+
+#if d_m3HasFloat
+    #define M3OP_F          M3OP
+#elif d_m3NoFloatDynamic
+    #define M3OP_F(n,o,t,op,...)        M3OP(n, o, t, { op_Unsupported, op_Unsupported, op_Unsupported, op_Unsupported }, __VA_ARGS__)
+#else
+    #define M3OP_F(...)     { 0 }
 #endif
 
 //-----------------------------------------------------------------------------------------------------------------------------------
@@ -168,7 +195,7 @@ bool        IsIntRegisterLocation       (i16 i_location);
 
 bool        IsStackPolymorphic          (IM3Compilation o);
 
-M3Result    CompileBlock                (IM3Compilation io, u8 i_blockType, u8 i_blockOpcode);
+M3Result    CompileBlock                (IM3Compilation io, IM3FuncType i_blockType, u8 i_blockOpcode);
 
 M3Result    Compile_BlockStatements     (IM3Compilation io);
 M3Result    Compile_Function            (IM3Function io_function);

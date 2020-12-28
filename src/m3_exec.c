@@ -10,20 +10,6 @@
 #include "m3_compile.h"
 
 
-static inline
-IM3Memory GetMemoryInfo (M3MemoryHeader * header)
-{
-    IM3Memory memory = & header->runtime->memory;
-
-    return memory;
-}
-
-static inline
-IM3Runtime GetRuntime (M3MemoryHeader * header)
-{
-    return header->runtime;
-}
-
 void  ReportError2  (IM3Function i_function, m3ret_t i_result)
 {
     i_function->module->runtime->runtimeError = (M3Result)i_result;
@@ -32,7 +18,7 @@ void  ReportError2  (IM3Function i_function, m3ret_t i_result)
 d_m3OpDef  (GetGlobal_s32)
 {
     u32 * global = immediate (u32 *);
-    slot (u32) = * global;                  //  printf ("get global: %p %" PRIi64 "\n", global, *global);
+    slot (u32) = * global;                        //  printf ("get global: %p %" PRIi64 "\n", global, *global);
 
     nextOp ();
 }
@@ -69,7 +55,7 @@ d_m3OpDef  (Call)
 {
     pc_t callPC                 = immediate (pc_t);
     i32 stackOffset             = immediate (i32);
-    IM3Memory memory            = GetMemoryInfo (_mem);
+    IM3Memory memory            = m3MemInfo (_mem);
 
     m3stack_t sp = _sp + stackOffset;
 
@@ -90,7 +76,7 @@ d_m3OpDef  (CallIndirect)
     IM3Module module            = immediate (IM3Module);
     IM3FuncType type            = immediate (IM3FuncType);
     i32 stackOffset             = immediate (i32);
-    IM3Memory memory            = GetMemoryInfo (_mem);
+    IM3Memory memory            = m3MemInfo (_mem);
 
     m3stack_t sp = _sp + stackOffset;
 
@@ -131,26 +117,58 @@ d_m3OpDef  (CallIndirect)
 d_m3OpDef  (CallRawFunction)
 {
     M3RawCall call = (M3RawCall) (* _pc++);
-    IM3Runtime runtime = GetRuntime (_mem);
+    IM3Function function = immediate (IM3Function);
+    void * userdata = immediate (void *);
+    u64* const sp = ((u64*)_sp);
 
-    m3ret_t possible_trap = call (runtime, (u64 *) _sp, m3MemData(_mem));
-    return possible_trap;
-}
+#if d_m3EnableStrace
+    IM3FuncType ftype = function->funcType;
 
-d_m3OpDef  (CallRawFunctionEx)
-{
-    M3RawCallEx call = (M3RawCallEx) (* _pc++);
-    void * cookie = immediate (void *);
-    IM3Runtime runtime = GetRuntime (_mem);
+    FILE* out = stderr;
+    char outbuff[1024];
+    char* outp = outbuff;
+    char* oute = outbuff+1024;
 
-    m3ret_t possible_trap = call (runtime, (u64 *)_sp, m3MemData(_mem), cookie);
+    outp += snprintf(outp, oute-outp, "%s.%s(", function->import.moduleUtf8, function->import.fieldUtf8);
+
+    const int nArgs = ftype->numArgs;
+    const int nRets = ftype->numRets;
+    for (int i=0; i<nArgs; i++) {
+        const int type = ftype->types[nRets + i];
+        switch (type) {
+        case c_m3Type_i32:  outp += snprintf(outp, oute-outp, "%i",   *(i32*)(sp+i)); break;
+        case c_m3Type_i64:  outp += snprintf(outp, oute-outp, "%lli", *(i64*)(sp+i)); break;
+        case c_m3Type_f32:  outp += snprintf(outp, oute-outp, "%f",   *(f32*)(sp+i)); break;
+        case c_m3Type_f64:  outp += snprintf(outp, oute-outp, "%lf",  *(f64*)(sp+i)); break;
+        default:            outp += snprintf(outp, oute-outp, "<unknown type %d>", type); break;
+        }
+        outp += snprintf(outp, oute-outp, (i < nArgs-1) ? ", " : ")");
+    }
+#endif
+
+    m3ret_t possible_trap = call (m3MemRuntime(_mem), sp, m3MemData(_mem), userdata);
+
+#if d_m3EnableStrace
+    if (possible_trap) {
+        fprintf(out, "%s -> %s\n", outbuff, possible_trap);
+    } else {
+        switch (GetSingleRetType(ftype)) {
+        case c_m3Type_none: fprintf(out, "%s\n", outbuff); break;
+        case c_m3Type_i32:  fprintf(out, "%s = %i\n",   outbuff, *(i32*)sp); break;
+        case c_m3Type_i64:  fprintf(out, "%s = %lli\n", outbuff, *(i64*)sp); break;
+        case c_m3Type_f32:  fprintf(out, "%s = %f\n",   outbuff, *(f32*)sp); break;
+        case c_m3Type_f64:  fprintf(out, "%s = %lf\n",  outbuff, *(f64*)sp); break;
+        }
+    }
+#endif
+
     return possible_trap;
 }
 
 
 d_m3OpDef  (MemCurrent)
 {
-    IM3Memory memory            = GetMemoryInfo (_mem);
+    IM3Memory memory            = m3MemInfo (_mem);
 
     _r0 = memory->numPages;
 
@@ -160,7 +178,7 @@ d_m3OpDef  (MemCurrent)
 
 d_m3OpDef  (MemGrow)
 {
-    IM3Runtime runtime          = GetRuntime (_mem);
+    IM3Runtime runtime          = m3MemRuntime(_mem);
     IM3Memory memory            = & runtime->memory;
 
     u32 numPagesToGrow = (u32) _r0;
@@ -217,7 +235,7 @@ d_m3OpDef  (Entry)
 
     IM3Function function = immediate (IM3Function);
 
-#if defined (d_m3SkipStackCheck)
+#if d_m3SkipStackCheck
     if (true)
 #else
     if ((void *) ((m3slot_t *) _sp + function->maxStackSlots) < _mem->maxStack)
@@ -241,14 +259,12 @@ d_m3OpDef  (Entry)
         m3ret_t r = nextOpDirect ();
 
 #       if d_m3LogExec
-            u8 returnType = function->funcType->returnType;
-
             char str [100] = { '!', 0 };
 
             if (not r)
-                SPrintArg (str, 99, _sp, function->funcType->returnType);
+                SPrintArg (str, 99, _sp, GetSingleRetType(function->funcType));
 
-            m3log (exec, " exit  < %s %s %s   %s", function->name, returnType ? "->" : "", str, r ? (cstr_t)r : "");
+            m3log (exec, " exit  < %s %s %s   %s", function->name, function->funcType->numRets ? "->" : "", str, r ? (cstr_t)r : "");
 #       elif d_m3LogStackTrace
             if (r)
                 printf (" ** %s  %p\n", function->name, _sp);
@@ -268,7 +284,7 @@ d_m3OpDef  (Loop)
 
     m3ret_t r;
 
-    IM3Memory memory = GetMemoryInfo (_mem);
+    IM3Memory memory = m3MemInfo (_mem);
 
     do
     {
@@ -355,9 +371,10 @@ d_m3OpDef (PreserveSetSlot_##TYPE)      \
 
 d_m3SetRegisterSetSlot (i32, _r0)
 d_m3SetRegisterSetSlot (i64, _r0)
+#if d_m3HasFloat
 d_m3SetRegisterSetSlot (f32, _fp0)
 d_m3SetRegisterSetSlot (f64, _fp0)
-
+#endif
 
 d_m3OpDef (CopySlot_32)
 {
@@ -452,7 +469,7 @@ void  ProfileHit  (cstr_t i_operationName)
     {
         if (slot->opName != i_operationName)
         {
-            m3Abort ("profiler slot collision; increase d_m3ProfilerSlotMask");
+            m3_Abort ("profiler slot collision; increase d_m3ProfilerSlotMask");
         }
     }
 

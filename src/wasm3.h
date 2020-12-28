@@ -10,8 +10,8 @@
 
 #define M3_VERSION_MAJOR 0
 #define M3_VERSION_MINOR 4
-#define M3_VERSION_REV   7
-#define M3_VERSION       "0.4.7"
+#define M3_VERSION_REV   8
+#define M3_VERSION       "0.4.8"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -53,11 +53,7 @@ enum // EWaTypes
     c_m3Type_f32    = 3,
     c_m3Type_f64    = 4,
 
-    c_m3Type_void,
-    c_m3Type_ptr,
-    c_m3Type_trap,
-
-    c_m3Type_runtime
+    c_m3Type_unknown
 };
 
 
@@ -112,7 +108,6 @@ d_m3ErrorConst  (functionLookupFailed,          "function lookup failed")
 d_m3ErrorConst  (functionImportMissing,         "missing imported function")
 
 d_m3ErrorConst  (malformedFunctionSignature,    "malformed function signature")
-d_m3ErrorConst  (funcSignatureMissingReturnType,"function signature missing return type")
 
 // compilation errors
 d_m3ErrorConst  (noCompiler,                    "no compiler found for opcode")
@@ -161,13 +156,16 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
 
     IM3Runtime          m3_NewRuntime               (IM3Environment         io_environment,
                                                      uint32_t               i_stackSizeInBytes,
-                                                     void *                 unused);
+                                                     void *                 i_userdata);
 
     void                m3_FreeRuntime              (IM3Runtime             i_runtime);
-    
+
     uint8_t *           m3_GetMemory                (IM3Runtime             i_runtime,
                                                      uint32_t *             o_memorySizeInBytes,
                                                      uint32_t               i_memoryIndex);
+
+    void *              m3_GetUserData              (IM3Runtime             i_runtime);
+
     // Wasm currently only supports one memory region. i_memoryIndex should be zero.
 
 //-------------------------------------------------------------------------------------------------------------------------------
@@ -186,24 +184,20 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
     M3Result            m3_LoadModule               (IM3Runtime io_runtime,  IM3Module io_module);
     //  LoadModule transfers ownership of a module to the runtime. Do not free modules once successfully imported into the runtime
 
-    typedef const void * (* M3RawCall) (IM3Runtime runtime, uint64_t * _sp, void * _mem);
+    typedef const void * (* M3RawCall) (IM3Runtime runtime, uint64_t * _sp, void * _mem, void * userdata);
 
     M3Result            m3_LinkRawFunction          (IM3Module              io_module,
                                                      const char * const     i_moduleName,
                                                      const char * const     i_functionName,
                                                      const char * const     i_signature,
-                                                     M3RawCall              i_function);
+													 M3RawCall              i_function);
 
-    typedef const void * (* M3RawCallEx) (IM3Runtime runtime, uint64_t * _sp, void * _mem, void * cookie);
-
-    // m3_LinkRawFunctionEx links a native callback function that has a cookie parameter, allowing one native
-    // callback to receive multiple m3 function calls. This ease for dynamic routing in the callback.
     M3Result            m3_LinkRawFunctionEx        (IM3Module              io_module,
                                                      const char * const     i_moduleName,
                                                      const char * const     i_functionName,
                                                      const char * const     i_signature,
-                                                     M3RawCallEx            i_function,
-                                                     void *                 i_cookie);
+                                                     M3RawCall              i_function,
+                                                     const void *           i_userdata);
 
 //-------------------------------------------------------------------------------------------------------------------------------
 //  functions

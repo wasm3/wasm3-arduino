@@ -52,7 +52,7 @@ void  m3_PrintRuntimeInfo  (IM3Runtime i_runtime)
 
 cstr_t  GetTypeName  (u8 i_m3Type)
 {
-    if (i_m3Type < 7)
+    if (i_m3Type < 5)
         return c_waTypes [i_m3Type];
     else
         return "?";
@@ -66,18 +66,26 @@ cstr_t  SPrintFuncTypeSignature  (IM3FuncType i_funcType)
     sprintf (string, "(");
 
     u32 numArgs = i_funcType->numArgs;
-    u8 * types = i_funcType->argTypes;
+    u32 numRets = i_funcType->numRets;
+    u8 * types = i_funcType->types;
 
     for (u32 i = 0; i < numArgs; ++i)
     {
         if (i != 0)
             strcat (string, ", ");
 
-        strcat (string, GetTypeName (types [i]));
+        strcat (string, GetTypeName (types [numRets + i]));
     }
 
     strcat (string, ") -> ");
-    strcat (string, GetTypeName (i_funcType->returnType));
+
+    for (u32 i = 0; i < numRets; ++i)
+    {
+        if (i != 0)
+            strcat (string, ", ");
+
+        strcat (string, GetTypeName (types [i]));
+    }
 
     return string;
 }
@@ -93,10 +101,12 @@ size_t  SPrintArg  (char * o_string, size_t i_n, m3stack_t i_sp, u8 i_type)
         len = snprintf (o_string, i_n, "%" PRIi32, * (i32 *) i_sp);
     else if (i_type == c_m3Type_i64)
         len = snprintf (o_string, i_n, "%" PRIi64, * (i64 *) i_sp);
+#if d_m3HasFloat
     else if (i_type == c_m3Type_f32)
         len = snprintf (o_string, i_n, "%f",  * (f32 *) i_sp);
     else if (i_type == c_m3Type_f64)
         len = snprintf (o_string, i_n, "%lf", * (f64 *) i_sp);
+#endif
 
     len = M3_MAX (0, len);
 
@@ -121,11 +131,11 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
     if (funcType)
     {
         u32 numArgs = funcType->numArgs;
-        u8 * types = funcType->argTypes;
+        u8 * argTypes = funcType->types + funcType->numRets;
 
         for (u32 i = 0; i < numArgs; ++i)
         {
-            u8 type = types [i];
+            u8 type = argTypes [i];
 
             ret = snprintf (s, e-s, "%s: ", c_waTypes [type]);
             s += M3_MAX (0, ret);
@@ -158,7 +168,7 @@ OpInfo find_operation_info  (IM3Operation i_operation)
     {
         IM3OpInfo oi = GetOpInfo(i);
 
-        if (oi->type != c_m3Type_void)
+        if (oi->type != c_m3Type_unknown)
         {
             for (u32 o = 0; o < 4; ++o)
             {
@@ -317,7 +327,7 @@ void  dump_type_stack  (IM3Compilation o)
 {
     /* Reminders about how the stack works! :)
      -- args & locals remain on the type stack for duration of the function. Denoted with a constant 'A' and 'L' in this dump.
-     -- the intial stack dumps originate from the CompileLocals () function, so these identifiers won't/can't be
+     -- the initial stack dumps originate from the CompileLocals () function, so these identifiers won't/can't be
      applied until this compilation stage is finished
      -- constants are not statically represented in the type stack (like args & constants) since they don't have/need
      write counts
@@ -334,6 +344,7 @@ void  dump_type_stack  (IM3Compilation o)
     i32 regAllocated [2] = { (i32) IsRegisterAllocated (o, 0), (i32) IsRegisterAllocated (o, 1) };
 
     // display whether r0 or fp0 is allocated. these should then also be reflected somewhere in the stack too.
+    d_m3Log(stack, "");
     printf ("                                                        ");
     printf ("%s %s    ", regAllocated [0] ? "(r0)" : "    ", regAllocated [1] ? "(fp0)" : "     ");
 
@@ -367,6 +378,7 @@ void  dump_type_stack  (IM3Compilation o)
 
         printf (" ");
     }
+    printf ("\n");
 
     for (u32 r = 0; r < 2; ++r)
         d_m3Assert (regAllocated [r] == 0);         // reg allocation & stack out of sync
@@ -431,11 +443,12 @@ void  log_emit  (IM3Compilation o, IM3Operation i_operation)
 # ifdef DEBUG
     OpInfo i = find_operation_info (i_operation);
 
+    d_m3Log(emit, "");
     if (i.info)
     {
-        printf ("%p: %s", GetPC (o),  i.info->name);
+        printf ("%p: %s\n", GetPC (o),  i.info->name);
     }
-    else printf ("not found: %p", i_operation);
+    else printf ("not found: %p\n", i_operation);
 # endif
 }
 

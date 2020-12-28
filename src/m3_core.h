@@ -28,8 +28,11 @@
 d_m3BeginExternC
 
 #if !defined(d_m3ShortTypesDefined)
+#if d_m3HasFloat || d_m3NoFloatDynamic
 typedef double          f64;
 typedef float           f32;
+#endif
+
 typedef uint64_t        u64;
 typedef int64_t         i64;
 typedef uint32_t        u32;
@@ -61,12 +64,6 @@ typedef m3slot_t *              m3stack_t;
 
 typedef
 const void * const  cvptr_t;
-
-# define d_m3Log_parse d_m3LogParse         // required for m3logif
-# define d_m3Log_stack d_m3LogWasmStack
-# define d_m3Log_runtime d_m3LogRuntime
-# define d_m3Log_exec d_m3LogExec
-# define d_m3Log_emit d_m3LogEmit
 
 # if d_m3LogOutput && defined (DEBUG)
 
@@ -121,10 +118,9 @@ const void * const  cvptr_t;
 #   endif
 
 #   define m3log(CATEGORY, FMT, ...)                    m3log_##CATEGORY (CATEGORY, FMT "\n", ##__VA_ARGS__)
-#   define m3logif(CATEGORY, STATEMENT)                 m3log_##CATEGORY (CATEGORY, ""); if (d_m3Log_##CATEGORY) { STATEMENT; printf ("\n"); }
 # else
+#   define d_m3Log(CATEGORY, FMT, ...)                  {}
 #   define m3log(CATEGORY, FMT, ...)                    {}
-#   define m3logif(CATEGORY, STATEMENT)                 {}
 # endif
 
 
@@ -174,8 +170,8 @@ M3CodePageHeader;
 #define d_externalKind_memory               2
 #define d_externalKind_global               3
 
-static const char * const c_waTypes []          = { "nil", "i32", "i64", "f32", "f64", "void", "void *" };
-static const char * const c_waCompactTypes []   = { "0", "i", "I", "f", "F", "v", "*" };
+static const char * const c_waTypes []          = { "nil", "i32", "i64", "f32", "f64", "unknown" };
+static const char * const c_waCompactTypes []   = { "_", "i", "I", "f", "F", "?" };
 
 
 # if d_m3VerboseLogs
@@ -197,15 +193,14 @@ M3Result m3Error (M3Result i_result, IM3Runtime i_runtime, IM3Module i_module, I
 #if d_m3LogNativeStack
 void        m3StackCheckInit        ();
 void        m3StackCheck            ();
-size_t      m3StackGetMax           ();
+int         m3StackGetMax           ();
 #else
 #define     m3StackCheckInit()
 #define     m3StackCheck()
 #define     m3StackGetMax()         0
 #endif
 
-void        m3Abort                 (const char* message);
-
+void        m3_Abort                 (const char* message);
 M3Result    m3_Malloc                (void ** o_ptr, size_t i_size);
 M3Result    m3_Realloc               (void ** io_ptr, size_t i_newSize, size_t i_oldSize);
 void        m3_Free                  (void ** io_ptr);
@@ -224,17 +219,19 @@ bool        IsFpType                (u8 i_wasmType);
 bool        Is64BitType             (u8 i_m3Type);
 u32         SizeOfType              (u8 i_m3Type);
 
-M3Result    Read_u64                (u64 * o_value, const u8 ** io_bytes, cbytes_t i_end);
-M3Result    Read_u32                (u32 * o_value, const u8 ** io_bytes, cbytes_t i_end);
+M3Result    Read_u64                (u64 * o_value, bytes_t * io_bytes, cbytes_t i_end);
+M3Result    Read_u32                (u32 * o_value, bytes_t * io_bytes, cbytes_t i_end);
+#if d_m3HasFloat || d_m3NoFloatDynamic
 M3Result    Read_f64                (f64 * o_value, bytes_t * io_bytes, cbytes_t i_end);
 M3Result    Read_f32                (f32 * o_value, bytes_t * io_bytes, cbytes_t i_end);
-M3Result    Read_u8                 (u8 * o_value, const u8 ** io_bytes, cbytes_t i_end);
+#endif
+M3Result    Read_u8                 (u8  * o_value, bytes_t * io_bytes, cbytes_t i_end);
 
 M3Result    ReadLebUnsigned         (u64 * o_value, u32 i_maxNumBits, bytes_t * io_bytes, cbytes_t i_end);
 M3Result    ReadLebSigned           (i64 * o_value, u32 i_maxNumBits, bytes_t * io_bytes, cbytes_t i_end);
-M3Result    ReadLEB_u32             (u32 * o_value, bytes_t* io_bytes, cbytes_t i_end);
-M3Result    ReadLEB_u7              (u8 * o_value, bytes_t * io_bytes, cbytes_t i_end);
-M3Result    ReadLEB_i7              (i8 * o_value, bytes_t * io_bytes, cbytes_t i_end);
+M3Result    ReadLEB_u32             (u32 * o_value, bytes_t * io_bytes, cbytes_t i_end);
+M3Result    ReadLEB_u7              (u8  * o_value, bytes_t * io_bytes, cbytes_t i_end);
+M3Result    ReadLEB_i7              (i8  * o_value, bytes_t * io_bytes, cbytes_t i_end);
 M3Result    ReadLEB_i32             (i32 * o_value, bytes_t * io_bytes, cbytes_t i_end);
 M3Result    ReadLEB_i64             (i64 * o_value, bytes_t * io_bytes, cbytes_t i_end);
 M3Result    Read_utf8               (cstr_t * o_utf8, bytes_t * io_bytes, cbytes_t i_end);

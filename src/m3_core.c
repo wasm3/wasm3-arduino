@@ -10,7 +10,7 @@
 
 #include "m3_core.h"
 
-void m3Abort(const char* message) {
+void m3_Abort(const char* message) {
 #if d_m3LogOutput
     fprintf(stderr, "Error: %s\n", message);
 #endif
@@ -183,7 +183,7 @@ void        m3StackCheck ()
 //        printf ("maxStack: %ld\n", m3StackGetMax ());
 }
 
-size_t      m3StackGetMax  ()
+int      m3StackGetMax  ()
 {
     return stack_start - stack_end;
 }
@@ -274,6 +274,8 @@ M3Result  Read_u32  (u32 * o_value, bytes_t * io_bytes, cbytes_t i_end)
     else return m3Err_wasmUnderrun;
 }
 
+#if d_m3HasFloat || d_m3NoFloatDynamic
+
 M3Result  Read_f64  (f64 * o_value, bytes_t * io_bytes, cbytes_t i_end)
 {
     const u8 * ptr = * io_bytes;
@@ -305,6 +307,7 @@ M3Result  Read_f32  (f32 * o_value, bytes_t * io_bytes, cbytes_t i_end)
     else return m3Err_wasmUnderrun;
 }
 
+#endif
 
 M3Result  Read_u8  (u8 * o_value, bytes_t  * io_bytes, cbytes_t i_end)
 {

@@ -15,19 +15,7 @@
 
 d_m3BeginExternC
 
-typedef struct M3FuncType
-{
-    struct M3FuncType *     next;
-
-    u32                     numArgs;
-    u8                      returnType;
-    u8                      argTypes        [3];    // M3FuncType is a dynamically sized object; these are padding
-}
-M3FuncType;
-
-typedef M3FuncType *        IM3FuncType;
-
-M3Result    AllocFuncType                   (IM3FuncType * o_functionType, u32 i_numArgs);
+M3Result    AllocFuncType                   (IM3FuncType * o_functionType, u32 i_numTypes);
 bool        AreFuncTypesEqual               (const IM3FuncType i_typeA, const IM3FuncType i_typeB);
 
 
@@ -70,8 +58,6 @@ typedef struct M3Function
 }
 M3Function;
 
-typedef M3Function *        IM3Function;
-
 void        Function_Release            (IM3Function i_function);
 void        Function_FreeCompiledCode   (IM3Function i_function);
 
@@ -79,7 +65,6 @@ cstr_t      GetFunctionImportModuleName (IM3Function i_function);
 cstr_t      GetFunctionName             (IM3Function i_function);
 u32         GetFunctionNumArgs          (IM3Function i_function);
 u32         GetFunctionNumReturns       (IM3Function i_function);
-u8          GetFunctionReturnType       (IM3Function i_function);
 
 u32         GetFunctionNumArgsAndLocals (IM3Function i_function);
 
@@ -133,8 +118,10 @@ typedef struct M3Global
     union
     {
         i64 intValue;
+#if d_m3HasFloat
         f64 f64Value;
         f32 f32Value;
+#endif
     };
 
     bytes_t                 initExpr;       // wasm code
@@ -189,17 +176,10 @@ typedef struct M3Module
 }
 M3Module;
 
-typedef M3Module *          IM3Module;
-
-
 M3Result                    Module_AddGlobal            (IM3Module io_module, IM3Global * o_global, u8 i_type, bool i_mutable, bool i_isImported);
 
 M3Result                    Module_AddFunction          (IM3Module io_module, u32 i_typeIndex, IM3ImportInfo i_importInfo /* can be null */);
 IM3Function                 Module_GetFunction          (IM3Module i_module, u32 i_functionIndex);
-
-//---------------------------------------------------------------------------------------------------------------------------------
-
-static const u32 c_m3NumTypesPerPage = 8;
 
 //---------------------------------------------------------------------------------------------------------------------------------
 
@@ -208,6 +188,8 @@ typedef struct M3Environment
 //    struct M3Runtime *      runtimes;
 
     IM3FuncType             funcTypes;          // linked list
+
+    IM3FuncType             retFuncTypes[5];
 
     M3CodePage *            pagesReleased;
 }
@@ -218,12 +200,8 @@ void                        Environment_Release         (IM3Environment i_enviro
 // takes ownership of io_funcType and returns a pointer to the persistent version (could be same or different)
 void                        Environment_AddFuncType     (IM3Environment i_environment, IM3FuncType * io_funcType);
 
-typedef M3Environment *     IM3Environment;
-
 //---------------------------------------------------------------------------------------------------------------------------------
 
-// OPTZ: function types need to move to the runtime structure so that all modules can share types
-// then type equality can be a simple pointer compare for indirect call checks
 typedef struct M3Runtime
 {
     M3Compilation           compilation;
@@ -242,24 +220,23 @@ typedef struct M3Runtime
     u32                     stackSize;
     u32                     numStackSlots;
 
+    i32                     exit_code;
     u32                     argc;
     ccstr_t *               argv;
 
-    M3Result                runtimeError;
+    void *                  userdata;
 
     M3Memory                memory;
     u32                     memoryLimit;
 
+    M3Result                runtimeError;
+
     M3ErrorInfo             error;
 #if d_m3VerboseLogs
-    char                    error_message[256];
+    char                    error_message[256]; // the actual buffer. M3ErrorInfo can point to this
 #endif
-    i32                     exit_code;
 }
 M3Runtime;
-
-typedef M3Runtime *         IM3Runtime;
-
 
 void                        InitRuntime                 (IM3Runtime io_runtime, u32 i_stackSizeInBytes);
 void                        Runtime_Release             (IM3Runtime io_runtime);

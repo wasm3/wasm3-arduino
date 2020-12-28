@@ -206,6 +206,12 @@ void wasm_task(void*)
         Serial.print(" (");
         Serial.print(info.message);
         Serial.println(")");
+        if (info.file && strlen(info.file) && info.line) {
+            Serial.print("At ");
+            Serial.print(info.file);
+            Serial.print(":");
+            Serial.println(info.line);
+        }
     }
 }
 
@@ -218,7 +224,7 @@ void setup()
     // Needed for native USB port only
     while(!Serial) {}
 
-    Serial.println("\nWasm3 v" M3_VERSION ", build " __DATE__ " " __TIME__);
+    Serial.println("\nWasm3 v" M3_VERSION " (" M3_ARCH "), build " __DATE__ " " __TIME__);
 
 #ifdef ESP32
     // On ESP32, we can launch in a separate thread

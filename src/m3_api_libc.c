@@ -43,7 +43,6 @@ m3ApiRawFunction(m3_libc_memset)
     m3ApiReturn(result);
 }
 
-
 m3ApiRawFunction(m3_libc_memmove)
 {
     m3ApiReturnType (int32_t)

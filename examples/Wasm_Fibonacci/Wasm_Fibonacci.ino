@@ -48,7 +48,7 @@ void wasm_task(void*)
     if (!runtime) FATAL("NewRuntime", "failed");
 
     IM3Module module;
-    result = m3_ParseModule (env, &module, fib_wasm, sizeof(fib_wasm)-1);
+    result = m3_ParseModule (env, &module, fib_wasm, sizeof(fib_wasm));
     if (result) FATAL("ParseModule", result);
 
     result = m3_LoadModule (runtime, module);
@@ -117,3 +117,4 @@ void loop()
 {
     delay(100);
 }
+

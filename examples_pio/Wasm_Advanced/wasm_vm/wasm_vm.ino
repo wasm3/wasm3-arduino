@@ -172,7 +172,7 @@ void wasm_task(void*)
 #endif
 
     IM3Module module;
-    result = m3_ParseModule (env, &module, app_wasm, app_wasm_len-1);
+    result = m3_ParseModule (env, &module, app_wasm, app_wasm_len);
     if (result) FATAL("ParseModule", result);
 
     result = m3_LoadModule (runtime, module);

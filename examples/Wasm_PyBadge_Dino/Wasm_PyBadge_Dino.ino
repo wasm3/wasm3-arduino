@@ -123,8 +123,7 @@ void display_info()
     arcada.display->setTextColor(ARCADA_BLACK);
     arcada.display->setTextWrap(true);
     arcada.display->setCursor(0, 5);
-    arcada.display->println(" Wasm3 v" M3_VERSION " (" M3_ARCH ")");
-    arcada.display->println();
+    arcada.display->println(" Wasm3 v" M3_VERSION " (" M3_ARCH "@" + String(F_CPU/1000000) + "MHz)\n");
     arcada.display->println(" Dino game");
     arcada.display->println(" by Ben Smith (binji)");    
 }
@@ -186,8 +185,10 @@ void setup()
 
       //Serial.print("FPS: "); Serial.println(1000/(millis() - framestart));
 
-      // Limit to 40 fps
-      while (millis() - framestart < (1000/40)) { delay(1); }
+      // Limit to 40..70 fps, depending on CPU/overclock setting (120..200MHz)
+      //const int target_fps = map(F_CPU/1000000, 120, 200, 40, 70);
+      const int target_fps = 40;
+      while (millis() - framestart < (1000/target_fps)) { delay(1); }
     }
 
     if (result != m3Err_none) {

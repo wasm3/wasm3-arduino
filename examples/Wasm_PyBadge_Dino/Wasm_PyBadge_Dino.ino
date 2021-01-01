@@ -162,6 +162,7 @@ void setup()
         //NVIC_SystemReset();
 
         // Restart Dino game
+        init_random();
         display_info();
         load_wasm();
         delay(100);

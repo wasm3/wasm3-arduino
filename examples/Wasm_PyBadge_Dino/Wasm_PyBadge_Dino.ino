@@ -158,28 +158,30 @@ void setup()
 
       // Process inputs
       uint32_t pressed_buttons = arcada.readButtons();
-      if (pressed_buttons & ARCADA_BUTTONMASK_START) {
+      if (arcada.justPressedButtons() & ARCADA_BUTTONMASK_START) {
         //NVIC_SystemReset();
 
         // Restart Dino game
         init_random();
         display_info();
         load_wasm();
-        delay(100);
+      }
 
-      } else if (pressed_buttons & ARCADA_BUTTONMASK_A && pressed_buttons & ARCADA_BUTTONMASK_B) {
-        *(uint32_t*)(mem) = 3;
-      } else if (pressed_buttons & ARCADA_BUTTONMASK_B) { // Down
-        *(uint32_t*)(mem) = 2;
-      } else if (pressed_buttons & ARCADA_BUTTONMASK_A) { // Up
-        *(uint32_t*)(mem) = 1;
-      } else {
-        *(uint32_t*)(mem) = 0;
+      uint32_t* input = (uint32_t*)(mem + 0x0000);
+
+      *input = 0;
+      if (pressed_buttons & ARCADA_BUTTONMASK_A) { // Up
+        *input |= 0x1;
+      }
+      if (pressed_buttons & ARCADA_BUTTONMASK_B) { // Down
+        *input |= 0x2;
       }
 
       // Render frame
       result = m3_CallWithArgs (func_run, 0, i_argv);
       if (result) break;
+
+      // Output to display
       arcada.display->drawRGBBitmap(0, 40, (uint16_t*)(mem+0x5000), 160, 75);
 
       //Serial.print("FPS: "); Serial.println(1000/(millis() - framestart));

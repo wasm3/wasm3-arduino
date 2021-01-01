@@ -73,6 +73,13 @@ void setup()
     // Needed for native USB port only
     //while(!Serial) {}
 
+    uint32_t tend, tstart;
+    TSTART();
+
+    // Try to randomize seed
+    randomSeed((analogRead(A5) << 16) + analogRead(A4));
+    Serial.print("Random: 0x"); Serial.println(random(INT_MAX), HEX);
+
     // Start TFT and fill black
     if (!arcada.arcadaBegin()) {
       Serial.print("Failed to begin");
@@ -80,22 +87,18 @@ void setup()
     }
     arcada.displayBegin();
     arcada.setBacklight(128);
-  
-    arcada.display->setCursor(0, 0);
-    arcada.display->fillScreen(ARCADA_BLACK);
-    arcada.display->setTextColor(ARCADA_WHITE);
-    arcada.display->setTextSize(1);
-    arcada.display->setTextWrap(true);
-    arcada.display->println("Wasm3 v" M3_VERSION " (" M3_ARCH ")");
-    arcada.display->println("build " __DATE__ " " __TIME__);
-    arcada.display->println("\nDino game");
-    arcada.display->println("by Ben Smith (binji)");
-    
-    // Try to randomize seed
-    randomSeed((analogRead(A5) << 16) + analogRead(A4));
-    Serial.print("Random: "); Serial.println(random(INT_MAX), HEX);
 
-    uint32_t tend, tstart;
+    TFINISH("Arcada init");
+
+    arcada.display->fillScreen(ARCADA_WHITE);
+    arcada.display->setTextColor(ARCADA_BLACK);
+    arcada.display->setTextWrap(true);
+    arcada.display->setCursor(0, 5);
+    arcada.display->println(" Wasm3 v" M3_VERSION " (" M3_ARCH ")");
+    arcada.display->println();
+    arcada.display->println(" Dino game");
+    arcada.display->println(" by Ben Smith (binji)");
+
     TSTART();
 
     M3Result result = m3Err_none;
@@ -116,11 +119,15 @@ void setup()
     result = LinkImports (runtime);
     if (result) FATAL("LinkImports", result);
 
+    TFINISH("Wasm3 init+parse");
+
+    TSTART();
+
     IM3Function f;
     result = m3_FindFunction (&f, runtime, "run");
     if (result) FATAL("FindFunction", result);
 
-    TFINISH("Init");
+    TFINISH("Compile run()");
 
     Serial.println("Running WebAssembly...");
 
@@ -147,7 +154,7 @@ void setup()
       // Render frame
       result = m3_CallWithArgs (f, 0, i_argv);
       if (result) break;
-      arcada.display->drawRGBBitmap(0, 50, (uint16_t*)(mem+0x5000), 160, 75);
+      arcada.display->drawRGBBitmap(0, 40, (uint16_t*)(mem+0x5000), 160, 75);
 
       //Serial.print("FPS: "); Serial.println(1000/(millis() - framestart));
 

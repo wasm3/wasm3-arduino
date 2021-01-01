@@ -182,15 +182,15 @@
   ;;  }
   ;;
   ;;   w  h col
-  (i8 20 22 171)  ;;  0 dead,stand,run1,run2
-  (i8 28 13 171)  ;;  3 duck1,duck2
+  (i8 20 22 170)  ;;  0 dead,stand,run1,run2
+  (i8 28 13 170)  ;;  3 duck1,duck2
   (i8 13 26 172)  ;;  6 cactus1
   (i8 19 18 172)  ;;  9 cactus2
   (i8 28 18 172)  ;; 12 cactus3
   (i8  9 18 172)  ;; 15 cactus4
   (i8 40 26 172)  ;; 18 cactus5
   (i8 26  8  37)  ;; 21 cloud
-  (i8 64  5 171)  ;; 24 ground
+  (i8 64  5 170)  ;; 24 ground
   (i8 23 14 172)  ;; 27 bird1
   (i8 23 16 172)  ;; 30 bird2
   (i8  3  5 172)  ;; 33 digits
@@ -441,6 +441,22 @@
         (i32.const 1984))))
 )
 
+;; Convert Grayscale color to 16-bit RGB (565)
+(func $color565 (export "color565") (param $gray i32) (result i32)
+  (local.set $gray (i32.sub (i32.const 0xFF) (local.get $gray)))
+  (i32.or
+    (i32.div_u (i32.mul (local.get $gray) (i32.const 0x1F)) (i32.const 0xFF))
+    (i32.or
+      (i32.shl
+        (i32.div_u (i32.mul (local.get $gray) (i32.const 0x3F)) (i32.const 0xFF))
+        (i32.const 5))
+      (i32.shl
+        (i32.div_u (i32.mul (local.get $gray) (i32.const 0x1F)) (i32.const 0xFF))
+        (i32.const 11))
+    )
+  )
+)
+
 ;; Blit an 8bpp image to the screen at ($x, $y). The $whcol_offset and
 ;; $src_offset values are the same ones as are stored in the Image Table above.
 ;; They're supplied as parameters here so the Digits and GameOver images can
@@ -463,9 +479,8 @@
     (local.tee $w (i32.load8_u offset=297 (local.get $whcol_offset))))
   (local.set $h (i32.load8_u offset=298 (local.get $whcol_offset)))
   (local.set $color
-    (i32.shl
-      (i32.load8_u offset=299 (local.get $whcol_offset))
-      (i32.const 0)))
+    (call $color565
+      (i32.load8_u offset=299 (local.get $whcol_offset))))
 
   ;; if (x < 0)
   (if
@@ -515,7 +530,7 @@
                         (i32.shl (i32.add (local.get $dst_offset)
                                           (local.get $ix))
                                  (i32.const 1))))
-                    (i32.const 172))))
+                    (i32.const 0x528A)))) ;; $color565(172)
               ;; set new pixel
               (i32.store16 offset=0x5000 (local.get $dst_addr) (local.get $color))))
 
@@ -776,7 +791,7 @@
 
   ;; draw score
   (local.set $score (global.get $score))
-  (local.set $score_x (i32.const 300))
+  (local.set $score_x (i32.const 155))
   (loop $loop
     (drop
       (call $blit

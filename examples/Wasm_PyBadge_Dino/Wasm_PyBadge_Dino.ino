@@ -24,7 +24,7 @@
  * Engine start, liftoff!
  */
 
-#define FATAL(func, msg) { Serial.print("Fatal: " func " "); Serial.println(msg); return; }
+#define FATAL(func, msg) { Serial.print("Fatal: " func " "); Serial.println(msg); while(1) { delay(100); } }
 #define TSTART()         { tstart = micros(); }
 #define TFINISH(s)       { tend = micros(); Serial.print(s " in "); Serial.print(tend-tstart); Serial.println(" us"); }
 
@@ -65,6 +65,70 @@ M3Result  LinkImports  (IM3Runtime runtime)
 
 Adafruit_Arcada arcada;
 
+IM3Environment  env;
+IM3Runtime      runtime;
+IM3Module       module;
+IM3Function     func_run;
+uint8_t*        mem;
+
+void load_wasm()
+{
+    M3Result result = m3Err_none;
+    
+    if (!env) {
+      env = m3_NewEnvironment ();
+      if (!env) FATAL("NewEnvironment", "failed");
+    }
+
+    m3_FreeRuntime(runtime);
+
+    runtime = m3_NewRuntime (env, 1024, NULL);
+    if (!runtime) FATAL("NewRuntime", "failed");
+
+    result = m3_ParseModule (env, &module, dino_wasm, sizeof(dino_wasm));
+    if (result) FATAL("ParseModule", result);
+
+    result = m3_LoadModule (runtime, module);
+    if (result) FATAL("LoadModule", result);
+
+    result = LinkImports (runtime);
+    if (result) FATAL("LinkImports", result);
+
+    mem = m3_GetMemory (runtime, NULL, 0);
+    if (!mem) FATAL("GetMemory", "failed");
+    
+    result = m3_FindFunction (&func_run, runtime, "run");
+    if (result) FATAL("FindFunction", result);
+}
+
+void init_random()
+{
+    // Try to randomize seed
+    randomSeed((analogRead(A5) << 16) + analogRead(A4));
+    Serial.print("Random: 0x"); Serial.println(random(INT_MAX), HEX);
+}
+
+void init_arcada()
+{
+    if (!arcada.arcadaBegin()) {
+      FATAL("arcadaBegin", "failed");
+    }
+    arcada.displayBegin();
+    arcada.setBacklight(128);
+}
+
+void display_info()
+{
+    arcada.display->fillScreen(ARCADA_WHITE);
+    arcada.display->setTextColor(ARCADA_BLACK);
+    arcada.display->setTextWrap(true);
+    arcada.display->setCursor(0, 5);
+    arcada.display->println(" Wasm3 v" M3_VERSION " (" M3_ARCH ")");
+    arcada.display->println();
+    arcada.display->println(" Dino game");
+    arcada.display->println(" by Ben Smith (binji)");    
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -75,64 +139,19 @@ void setup()
 
     uint32_t tend, tstart;
     TSTART();
-
-    // Try to randomize seed
-    randomSeed((analogRead(A5) << 16) + analogRead(A4));
-    Serial.print("Random: 0x"); Serial.println(random(INT_MAX), HEX);
-
-    // Start TFT and fill black
-    if (!arcada.arcadaBegin()) {
-      Serial.print("Failed to begin");
-      while (1);
-    }
-    arcada.displayBegin();
-    arcada.setBacklight(128);
-
+      init_random();
+      init_arcada();
+      display_info();
     TFINISH("Arcada init");
 
-    arcada.display->fillScreen(ARCADA_WHITE);
-    arcada.display->setTextColor(ARCADA_BLACK);
-    arcada.display->setTextWrap(true);
-    arcada.display->setCursor(0, 5);
-    arcada.display->println(" Wasm3 v" M3_VERSION " (" M3_ARCH ")");
-    arcada.display->println();
-    arcada.display->println(" Dino game");
-    arcada.display->println(" by Ben Smith (binji)");
-
     TSTART();
-
-    M3Result result = m3Err_none;
-
-    IM3Environment env = m3_NewEnvironment ();
-    if (!env) FATAL("NewEnvironment", "failed");
-
-    IM3Runtime runtime = m3_NewRuntime (env, 1024, NULL);
-    if (!runtime) FATAL("NewRuntime", "failed");
-
-    IM3Module module;
-    result = m3_ParseModule (env, &module, dino_wasm, sizeof(dino_wasm));
-    if (result) FATAL("ParseModule", result);
-
-    result = m3_LoadModule (runtime, module);
-    if (result) FATAL("LoadModule", result);
-
-    result = LinkImports (runtime);
-    if (result) FATAL("LinkImports", result);
-
-    TFINISH("Wasm3 init+parse");
-
-    TSTART();
-
-    IM3Function f;
-    result = m3_FindFunction (&f, runtime, "run");
-    if (result) FATAL("FindFunction", result);
-
-    TFINISH("Compile run()");
+      load_wasm();
+    TFINISH("Wasm3 init");
 
     Serial.println("Running WebAssembly...");
 
+    M3Result result;
     const char* i_argv[1] = { NULL };
-    uint8_t* mem = m3_GetMemory(runtime, NULL, 0);
 
     while (true) {
       const uint32_t framestart = millis();
@@ -140,7 +159,13 @@ void setup()
       // Process inputs
       uint32_t pressed_buttons = arcada.readButtons();
       if (pressed_buttons & ARCADA_BUTTONMASK_START) {
-        NVIC_SystemReset();
+        //NVIC_SystemReset();
+
+        // Restart Dino game
+        display_info();
+        load_wasm();
+        delay(100);
+
       } else if (pressed_buttons & ARCADA_BUTTONMASK_A && pressed_buttons & ARCADA_BUTTONMASK_B) {
         *(uint32_t*)(mem) = 3;
       } else if (pressed_buttons & ARCADA_BUTTONMASK_B) { // Down
@@ -152,7 +177,7 @@ void setup()
       }
 
       // Render frame
-      result = m3_CallWithArgs (f, 0, i_argv);
+      result = m3_CallWithArgs (func_run, 0, i_argv);
       if (result) break;
       arcada.display->drawRGBBitmap(0, 40, (uint16_t*)(mem+0x5000), 160, 75);
 

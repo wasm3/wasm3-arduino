@@ -5,8 +5,8 @@
 ;; *** Memory map ***
 ;; 0x0                Input: 1=up, 2=down, 3=up+down
 ;; [0x4, 0x5000)      See below
-;; [0x5000, 0x1c000)  Color[300*75]  canvas
-(memory (export "mem") 2)
+;; [0x5000, 0xADC0)   16-bit canvas [160*75] (24000 bytes)
+(memory (export "mem") 1)
 
 ;; Some float constants to reduce size.
 (global $f0 f32 (f32.const 0))
@@ -468,7 +468,7 @@
       (param $src_offset i32) (result i32)
   (local $w i32)             ;; destination width of the sprite (maybe clipped)
   (local $h i32)             ;; height of the sprite (never clipped)
-  (local $color i32)         ;; full 32-bit ARGB color
+  (local $color i32)         ;; 16-bit RGB(565) color
   (local $dst_offset i32)    ;; destination offset, updated per-row
   (local $dst_addr i32)      ;; destination address, calculated per-pixel
   (local $src_stride i32)    ;; the original width of the sprite
@@ -570,7 +570,7 @@
   (local $dino_y f32)       ;; new dino y, updated each frame
 
   ;; Clear the screen (the byte at 0x4fff is initialized to 0xff)
-  (call $memcpy (i32.const 0x5000) (i32.const 0x4fff) (i32.const 0x1af90)) ;; 90000+0x5000
+  (call $memcpy (i32.const 0x5000) (i32.const 0x4fff) (i32.const 0xADC0)) ;; 24000+0x5000
 
   ;; Animation timer
   (global.set $timer (i32.add (global.get $timer) (i32.const 1)))

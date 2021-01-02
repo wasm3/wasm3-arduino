@@ -186,7 +186,7 @@ void setup()
       arcada.display->drawRGBBitmap(0, 40, (uint16_t*)(mem+0x5000), 160, 75);
 
       const uint32_t frametime = millis() - framestart;
-      Serial.print("FPS: "); Serial.println(1000/frametime);
+      //Serial.print("FPS: "); Serial.println(1000/frametime);
 
       // Limit to 50..70 fps, depending on CPU/overclock setting (120..200MHz)
       //const int target_frametime = 1000/map(F_CPU/1000000, 120, 200, 50, 70);

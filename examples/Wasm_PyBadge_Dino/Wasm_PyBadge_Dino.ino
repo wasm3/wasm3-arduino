@@ -17,6 +17,8 @@
  *   export PATH=/opt/wasp/build/src/tools:$PATH
  *   wasp wat2wasm --enable-numeric-values -o dino.wasm dino.wat
  *   xxd -iC dino.wasm > dino.wasm.h
+ *   
+ * Note: In Arduino IDE, select Tools->Optimize->Faster (-O3)
  */
 #include "dino.wasm.h"
 
@@ -183,12 +185,15 @@ void setup()
       // Output to display
       arcada.display->drawRGBBitmap(0, 40, (uint16_t*)(mem+0x5000), 160, 75);
 
-      //Serial.print("FPS: "); Serial.println(1000/(millis() - framestart));
+      const uint32_t frametime = millis() - framestart;
+      Serial.print("FPS: "); Serial.println(1000/frametime);
 
-      // Limit to 40..70 fps, depending on CPU/overclock setting (120..200MHz)
-      //const int target_fps = map(F_CPU/1000000, 120, 200, 40, 70);
-      const int target_fps = 40;
-      while (millis() - framestart < (1000/target_fps)) { delay(1); }
+      // Limit to 50..70 fps, depending on CPU/overclock setting (120..200MHz)
+      //const int target_frametime = 1000/map(F_CPU/1000000, 120, 200, 50, 70);
+      const uint32_t target_frametime = 1000/50;
+      if (target_frametime > frametime) {
+        delay(target_frametime - frametime);
+      }
     }
 
     if (result != m3Err_none) {

@@ -25,5 +25,5 @@ pub fn getPinLED      () -> u32               { unsafe { _getPinLED() } }
 
 #[panic_handler]
 fn handle_panic(_: &core::panic::PanicInfo) -> ! {
-    unsafe { core::intrinsics::unreachable() }
+    unsafe { core::arch::wasm32::unreachable() }
 }

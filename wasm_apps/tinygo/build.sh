@@ -1,12 +1,12 @@
 # Prepare
-export PATH=/usr/local/tinygo/bin:$PATH
-export GOROOT=/opt/go
+export PATH=/opt/tinygo0.17.0/bin:$PATH
+export PATH=/opt/go1.15.2/bin:$PATH
+export GOROOT=/opt/go1.15.2
 
 # Compile
 tinygo  build -target wasm                \
         -panic trap -wasm-abi generic     \
         -ldflags="-z stack-size=2048 --max-memory=65536" \
-        -heap-size 4096                   \
         -o app.wasm app.go
 
 # Optimize (optional)

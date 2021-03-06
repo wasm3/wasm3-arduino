@@ -2,9 +2,9 @@
   "license": "MIT",
   "scripts": {
     "build": "npm run asbuild:optimized && xxd -i app.wasm > app.wasm.h",
-    "asbuild:optimized": "npx asc app.ts -b app.wasm -t app.wat -O3z --runtime half --noAssert --use abort="
+    "asbuild:optimized": "npx asc app.ts -b app.wasm -t app.wat -O3z --runtime stub --noAssert --use abort="
   },
   "devDependencies": {
-    "assemblyscript": "^0.9.0"
+    "assemblyscript": "^0.18.0"
   }
 }

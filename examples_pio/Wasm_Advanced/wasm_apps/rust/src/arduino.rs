@@ -38,5 +38,5 @@ pub fn println(string: &str) {
 
 #[panic_handler]
 fn handle_panic(_: &core::panic::PanicInfo) -> ! {
-    unsafe { core::intrinsics::unreachable() }
+    unsafe { core::arch::wasm32::unreachable() }
 }

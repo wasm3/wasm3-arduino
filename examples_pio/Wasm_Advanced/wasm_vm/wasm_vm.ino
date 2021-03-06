@@ -125,11 +125,6 @@ m3ApiRawFunction(m3_arduino_getGreeting)
     m3ApiSuccess();
 }
 
-m3ApiRawFunction(m3_dummy)
-{
-    m3ApiSuccess();
-}
-
 M3Result  LinkArduino  (IM3Runtime runtime)
 {
     IM3Module module = runtime->modules;
@@ -144,9 +139,6 @@ M3Result  LinkArduino  (IM3Runtime runtime)
     m3_LinkRawFunction (module, arduino, "getPinLED",        "i()",    &m3_arduino_getPinLED);
     m3_LinkRawFunction (module, arduino, "getGreeting",      "v(*i)",  &m3_arduino_getGreeting);
     m3_LinkRawFunction (module, arduino, "print",            "v(*i)",  &m3_arduino_print);
-
-    // Dummy (for TinyGo)
-    m3_LinkRawFunction (module, "env",   "io_get_stdout",    "i()",    &m3_dummy);
 
     return m3Err_none;
 }
@@ -182,19 +174,12 @@ void wasm_task(void*)
     if (result) FATAL("LinkArduino", result);
 
     IM3Function f;
-    // Check for TinyGo entry function first
-    // See https://github.com/tinygo-org/tinygo/issues/866
-    result = m3_FindFunction (&f, runtime, "cwa_main");
-    if (result) {
-        result = m3_FindFunction (&f, runtime, "_start");
-    }
-
+    result = m3_FindFunction (&f, runtime, "_start");
     if (result) FATAL("FindFunction", result);
 
     Serial.println("Running WebAssembly...");
 
-    const char* i_argv[1] = { NULL };
-    result = m3_CallWithArgs (f, 0, i_argv);
+    result = m3_CallV (f);
 
     // Should not arrive here
 

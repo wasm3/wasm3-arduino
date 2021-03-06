@@ -129,7 +129,7 @@ void display_info()
     tft.setCursor(0, 5);
     tft.println("  Wasm3 v" M3_VERSION " (ESP32)");
     tft.println("  Dino game");
-    tft.println("  by Ben Smith (binji)");    
+    tft.println("  by Ben Smith (binji)");
 }
 
 void setup()

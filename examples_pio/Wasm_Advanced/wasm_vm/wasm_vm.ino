@@ -28,10 +28,10 @@
  * WebAssembly app
  */
 
-#include "../wasm_apps/cpp/app.wasm.h"
-//#include "../wasm_apps/assemblyscript/app.wasm.h"
+#include "../wasm_apps/assemblyscript/app.wasm.h"
 //#include "../wasm_apps/rust/app.wasm.h"
 //#include "../wasm_apps/tinygo/app.wasm.h"
+//#include "../wasm_apps/cpp/app.wasm.h"
 
 /*
  * API bindings
@@ -117,7 +117,7 @@ m3ApiRawFunction(m3_arduino_print)
 m3ApiRawFunction(m3_arduino_getGreeting)
 {
     m3ApiGetArgMem  (uint8_t *,    out)
-    m3ApiGetArg     (int32_t,      out_len)
+    m3ApiGetArg     (uint32_t,     out_len)
 
     const char buff[] = "Hello WASM world! 😊";
     memcpy(out, buff, min(sizeof(buff), out_len));

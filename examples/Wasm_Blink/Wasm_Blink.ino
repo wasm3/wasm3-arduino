@@ -199,8 +199,7 @@ void wasm_task(void*)
 
     Serial.println("Running WebAssembly...");
 
-    const char* i_argv[1] = { NULL };
-    result = m3_CallWithArgs (f, 0, i_argv);
+    result = m3_CallV (f);
 
     // Should not arrive here
 

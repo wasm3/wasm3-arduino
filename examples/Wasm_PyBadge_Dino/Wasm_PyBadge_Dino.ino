@@ -7,7 +7,6 @@
 #include "Adafruit_Arcada.h"
 
 #include <wasm3.h>
-#include <m3_env.h>
 #include <m3_api_defs.h>
 
 /*
@@ -35,7 +34,7 @@
 m3ApiRawFunction(Math_random)
 {
     m3ApiReturnType (float)
-    
+
     float r = (float)random(INT_MAX)/INT_MAX;
     //Serial.print("Random: "); Serial.println(r);
 
@@ -49,20 +48,11 @@ m3ApiRawFunction(Dino_memcpy)
     m3ApiGetArgMem  (uint8_t *, src)
     m3ApiGetArgMem  (uint8_t *, dstend)
 
-    unsigned len = dstend-dst;
-    memcpy(dst, src, len ? len : 1);
+    do {
+        *dst++ = *src++;
+    } while (dst < dstend);
 
     m3ApiSuccess();
-}
-
-M3Result  LinkImports  (IM3Runtime runtime)
-{
-    IM3Module module = runtime->modules;
-
-    m3_LinkRawFunction (module, "Math",   "random",     "f()",      &Math_random);
-    m3_LinkRawFunction (module, "Dino",   "memcpy",     "v(iii)",   &Dino_memcpy);
-
-    return m3Err_none;
 }
 
 Adafruit_Arcada arcada;
@@ -93,25 +83,22 @@ void load_wasm()
     result = m3_LoadModule (runtime, module);
     if (result) FATAL("LoadModule", result);
 
-    result = LinkImports (runtime);
-    if (result) FATAL("LinkImports", result);
+    m3_LinkRawFunction (module, "Math",   "random",     "f()",      &Math_random);
+    m3_LinkRawFunction (module, "Dino",   "memcpy",     "v(iii)",   &Dino_memcpy);
 
     mem = m3_GetMemory (runtime, NULL, 0);
     if (!mem) FATAL("GetMemory", "failed");
-    
+
     result = m3_FindFunction (&func_run, runtime, "run");
     if (result) FATAL("FindFunction", result);
 }
 
-void init_random()
+void init_device()
 {
     // Try to randomize seed
     randomSeed((analogRead(A5) << 16) + analogRead(A4));
     Serial.print("Random: 0x"); Serial.println(random(INT_MAX), HEX);
-}
 
-void init_arcada()
-{
     if (!arcada.arcadaBegin()) {
       FATAL("arcadaBegin", "failed");
     }
@@ -127,7 +114,7 @@ void display_info()
     arcada.display->setCursor(0, 5);
     arcada.display->println(" Wasm3 v" M3_VERSION " (" M3_ARCH "@" + String(F_CPU/1000000) + "MHz)\n");
     arcada.display->println(" Dino game");
-    arcada.display->println(" by Ben Smith (binji)");    
+    arcada.display->println(" by Ben Smith (binji)");
 }
 
 void setup()
@@ -136,14 +123,15 @@ void setup()
 
     // Wait for serial port to connect
     // Needed for native USB port only
-    //while(!Serial) {}
+    while(!Serial) {}
+
+    Serial.println("\nWasm3 v" M3_VERSION " (" M3_ARCH "), build " __DATE__ " " __TIME__);
 
     uint32_t tend, tstart;
     TSTART();
-      init_random();
-      init_arcada();
+      init_device();
       display_info();
-    TFINISH("Arcada init");
+    TFINISH("Device init");
 
     TSTART();
       load_wasm();
@@ -152,10 +140,10 @@ void setup()
     Serial.println("Running WebAssembly...");
 
     M3Result result;
-    const char* i_argv[1] = { NULL };
+    uint64_t last_fps_print = 0;
 
     while (true) {
-      const uint32_t framestart = millis();
+      const uint64_t framestart = micros();
 
       // Process inputs
       uint32_t pressed_buttons = arcada.readButtons();
@@ -163,13 +151,11 @@ void setup()
         //NVIC_SystemReset();
 
         // Restart Dino game
-        init_random();
         display_info();
         load_wasm();
       }
 
       uint32_t* input = (uint32_t*)(mem + 0x0000);
-
       *input = 0;
       if (pressed_buttons & ARCADA_BUTTONMASK_A) { // Up
         *input |= 0x1;
@@ -179,20 +165,23 @@ void setup()
       }
 
       // Render frame
-      result = m3_CallWithArgs (func_run, 0, i_argv);
+      result = m3_CallV (func_run);
       if (result) break;
 
       // Output to display
       arcada.display->drawRGBBitmap(0, 40, (uint16_t*)(mem+0x5000), 160, 75);
 
-      const uint32_t frametime = millis() - framestart;
-      //Serial.print("FPS: "); Serial.println(1000/frametime);
+      const uint64_t frametime = micros() - framestart;
 
       // Limit to 50..70 fps, depending on CPU/overclock setting (120..200MHz)
-      //const int target_frametime = 1000/map(F_CPU/1000000, 120, 200, 50, 70);
-      const uint32_t target_frametime = 1000/50;
+      //const int target_frametime = 1000000/map(F_CPU/1000000, 120, 200, 50, 70);
+      const uint32_t target_frametime = 1000000/50;
       if (target_frametime > frametime) {
-        delay(target_frametime - frametime);
+        delay((target_frametime - frametime)/1000);
+      }
+      if (framestart - last_fps_print > 1000000) {
+        Serial.print("FPS: "); Serial.println((uint32_t)(1000000/frametime));
+        last_fps_print = framestart;
       }
     }
 

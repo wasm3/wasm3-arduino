@@ -5,13 +5,7 @@
  */
 
 #include <wasm3.h>
-#include <m3_env.h>
-
-/*
- * Configuration
- */
-#define FIB_ARG             "24"
-#define WASM_STACK_SLOTS    1024
+#include <m3_config.h>
 
 /*
  * WebAssembly app (recursive Fibonacci)
@@ -44,7 +38,7 @@ void wasm_task(void*)
     IM3Environment env = m3_NewEnvironment ();
     if (!env) FATAL("NewEnvironment", "failed");
 
-    IM3Runtime runtime = m3_NewRuntime (env, WASM_STACK_SLOTS, NULL);
+    IM3Runtime runtime = m3_NewRuntime (env, 1024, NULL);
     if (!runtime) FATAL("NewRuntime", "failed");
 
     IM3Module module;
@@ -60,17 +54,19 @@ void wasm_task(void*)
 
     TFINISH("Init");
 
-    Serial.println("Running fib(" FIB_ARG ")...");
+    Serial.println("Running fib(24)...");
 
     TSTART();
 
-    const char* i_argv[2] = { FIB_ARG , NULL };
-    result = m3_CallWithArgs (f, 1, i_argv);
+    result = m3_CallV (f, 24);
 
     TFINISH("Done");
 
     if (result == m3Err_none) {
-        uint32_t value = *(uint32_t*)(runtime->stack);
+        uint32_t value = 0;
+        result = m3_GetResultsV (f, &value);
+        if (result) FATAL("GetResults: %s", result);
+
         Serial.print("Result: ");
         Serial.println(value);
     } else {
@@ -117,4 +113,3 @@ void loop()
 {
     delay(100);
 }
-

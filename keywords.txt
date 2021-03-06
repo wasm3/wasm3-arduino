@@ -5,6 +5,7 @@ M3Result	KEYWORD1
 IM3Environment	KEYWORD1
 IM3Runtime	KEYWORD1
 IM3Module	KEYWORD1
+IM3Function	KEYWORD1
 m3ApiRawFunction	KEYWORD1
 
 #######################################
@@ -13,11 +14,26 @@ m3ApiRawFunction	KEYWORD1
 wasm3	KEYWORD2
 m3_NewEnvironment	KEYWORD2
 m3_NewRuntime	KEYWORD2
+m3_FreeRuntime	KEYWORD2
+m3_FreeModule	KEYWORD2
 m3_ParseModule	KEYWORD2
 m3_LoadModule	KEYWORD2
 m3_FindFunction	KEYWORD2
-m3_CallWithArgs	KEYWORD2
+m3_RunStart	KEYWORD2
+m3_GetArgCount	KEYWORD2
+m3_GetRetCount	KEYWORD2
+m3_GetArgType	KEYWORD2
+m3_GetRetType	KEYWORD2
+m3_Call	KEYWORD2
+m3_CallV	KEYWORD2
+m3_CallVL	KEYWORD2
+m3_CallArgv	KEYWORD2
+m3_GetResults	KEYWORD2
+m3_GetResultsV	KEYWORD2
+m3_GetResultsVL	KEYWORD2
 m3_LinkRawFunction	KEYWORD2
+m3_GetMemory	KEYWORD2
+m3_GetUserData	KEYWORD2
 
 #######################################
 # Literals (LITERAL1)

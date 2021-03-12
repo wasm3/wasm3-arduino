@@ -16,7 +16,7 @@
 #define BUTTON_UP           35
 #define BUTTON_DOWN         0
 
-#define DISPLAY_BRIGHTESS   1     // 0..255
+#define DISPLAY_BRIGHTESS   128    // 0..255
 
 TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
 
@@ -27,7 +27,7 @@ TFT_eSPI tft = TFT_eSPI(135, 240); // Invoke custom library
  *   export PATH=/opt/wasp/build/src/tools:$PATH
  *   wasp wat2wasm --enable-numeric-values -o dino.wasm dino.wat
  *   xxd -iC dino.wasm > dino.wasm.h
- *   
+ *
  * Note: In Arduino IDE, select Tools->Optimize->Faster (-O3)
  */
 #include "dino.wasm.h"

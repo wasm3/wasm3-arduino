@@ -9,6 +9,8 @@
 #include <wasm3.h>
 #include <m3_api_defs.h>
 
+#define DISPLAY_BRIGHTESS   128    // 0..255
+
 /*
  * Dino game by by Ben Smith (binji)
  *   https://github.com/binji/raw-wasm/tree/master/dino
@@ -16,7 +18,7 @@
  *   export PATH=/opt/wasp/build/src/tools:$PATH
  *   wasp wat2wasm --enable-numeric-values -o dino.wasm dino.wat
  *   xxd -iC dino.wasm > dino.wasm.h
- *   
+ *
  * Note: In Arduino IDE, select Tools->Optimize->Faster (-O3)
  */
 #include "dino.wasm.h"
@@ -103,7 +105,7 @@ void init_device()
       FATAL("arcadaBegin", "failed");
     }
     arcada.displayBegin();
-    arcada.setBacklight(128);
+    arcada.setBacklight(DISPLAY_BRIGHTESS);
 }
 
 void display_info()
@@ -123,7 +125,7 @@ void setup()
 
     // Wait for serial port to connect
     // Needed for native USB port only
-    while(!Serial) {}
+    //while(!Serial) {}
 
     Serial.println("\nWasm3 v" M3_VERSION " (" M3_ARCH "), build " __DATE__ " " __TIME__);
 

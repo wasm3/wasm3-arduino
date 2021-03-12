@@ -938,7 +938,7 @@ M3Result  Compile_Const_f32  (IM3Compilation o, m3opcode_t i_opcode)
 
     union { u32 u; f32 f; } value = { 0 };
 
-_   (Read_f32 (& value.f, & o->wasm, o->wasmEnd));              m3log (compile, d_indent " (const f32 = %f)", get_indention_string (o), value.f);
+_   (Read_f32 (& value.f, & o->wasm, o->wasmEnd));              m3log (compile, d_indent " (const f32 = %" PRIf32 ")", get_indention_string (o), value.f);
 _   (PushConst (o, value.u, c_m3Type_f32));
 
     _catch: return result;
@@ -951,7 +951,7 @@ M3Result  Compile_Const_f64  (IM3Compilation o, m3opcode_t i_opcode)
 
     union { u64 u; f64 f; } value = { 0 };
 
-_   (Read_f64 (& value.f, & o->wasm, o->wasmEnd));              m3log (compile, d_indent " (const f64 = %lf)", get_indention_string (o), value.f);
+_   (Read_f64 (& value.f, & o->wasm, o->wasmEnd));              m3log (compile, d_indent " (const f64 = %" PRIf64 ")", get_indention_string (o), value.f);
 _   (PushConst (o, value.u, c_m3Type_f64));
 
     _catch: return result;
@@ -1394,7 +1394,7 @@ _   (ReadLEB_u32 (& functionIndex, & o->wasm, o->wasmEnd));
 
     if (function)
     {                                                                   m3log (compile, d_indent " (func= '%s'; args= %d)",
-                                                                                get_indention_string (o), GetFunctionName (function), function->funcType->numArgs);
+                                                                                get_indention_string (o), m3_GetFunctionName (function), function->funcType->numArgs);
         if (function->module)
         {
             // OPTZ: could avoid arg copy when args are already sequential and at top
@@ -1422,7 +1422,7 @@ _           (EmitOp     (o, op));
         }
         else
         {
-            result = ErrorCompile (m3Err_functionImportMissing, o, "'%s.%s'", GetFunctionImportModuleName (function), GetFunctionName (function));
+            result = ErrorCompile (m3Err_functionImportMissing, o, "'%s.%s'", GetFunctionImportModuleName (function), m3_GetFunctionName (function));
         }
     }
     else result = m3Err_functionLookupFailed;
@@ -1509,13 +1509,10 @@ _   (ReadLebSigned (& type, 33, & o->wasm, o->wasmEnd));
 _       (NormalizeType (&valueType, type));                                m3log (compile, d_indent " (type: %s)", get_indention_string (o), c_waTypes [valueType]);
         *o_blockType = o->module->environment->retFuncTypes[valueType];
     }
-    else if (type < o->module->numFuncTypes)
-    {
-        *o_blockType = o->module->funcTypes[type];                         m3log (compile, d_indent " (type: %s)", get_indention_string (o), SPrintFuncTypeSignature (*o_blockType));
-    }
     else
     {
-        return "func type out of bounds";
+        _throwif("func type out of bounds", type >= o->module->numFuncTypes);
+        *o_blockType = o->module->funcTypes[type];                         m3log (compile, d_indent " (type: %s)", get_indention_string (o), SPrintFuncTypeSignature (*o_blockType));
     }
     _catch: return result;
 }
@@ -2171,6 +2168,7 @@ M3Result  Compile_BlockStatements  (IM3Compilation o)
 
     while (o->wasm < o->wasmEnd)
     {                                                                   emit_stack_dump (o);
+        o->lastOpcodeStart = o->wasm;
         m3opcode_t opcode = * (o->wasm++);                              log_opcode (o, opcode);
 
 #ifndef d_m3CompileExtendedOpcode
@@ -2179,12 +2177,14 @@ M3Result  Compile_BlockStatements  (IM3Compilation o)
         }
 #endif
 
-        M3Compiler compiler = GetOpInfo(opcode)->compiler;
+        IM3OpInfo opinfo = GetOpInfo(opcode);
+        _throwif(m3Err_unknownOpcode, opinfo == NULL);
 
-        if (not compiler)
-            compiler = Compile_Operator;
-
-        result = (* compiler) (o, opcode);
+        if (opinfo->compiler) {
+            result = (* opinfo->compiler) (o, opcode);
+        } else {
+            result = Compile_Operator(o, opcode);
+        }
 
         o->previousOpcode = opcode;                             //                      m3logif (stack, dump_type_stack (o))
 
@@ -2197,7 +2197,7 @@ M3Result  Compile_BlockStatements  (IM3Compilation o)
         if (opcode == c_waOp_end or opcode == c_waOp_else)
             break;
     }
-
+_catch:
     return result;
 }
 
@@ -2341,7 +2341,7 @@ M3Result  Compile_Function  (IM3Function io_function)
     IM3FuncType ft = io_function->funcType;
 
     M3Result result = m3Err_none;                                     m3log (compile, "compiling: '%s'; wasm-size: %d; numArgs: %d; return: %s",
-                                                                           io_function->name, (u32) (io_function->wasmEnd - io_function->wasm), GetFunctionNumArgs (io_function), c_waTypes [GetSingleRetType(ft)]);
+                                                                           m3_GetFunctionName(io_function), (u32) (io_function->wasmEnd - io_function->wasm), GetFunctionNumArgs (io_function), c_waTypes [GetSingleRetType(ft)]);
     IM3Runtime runtime = io_function->module->runtime;
 
     IM3Compilation o = & runtime->compilation;

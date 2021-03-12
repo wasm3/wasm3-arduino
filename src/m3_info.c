@@ -9,8 +9,9 @@
 #include "m3_info.h"
 #include "m3_emit.h"
 #include "m3_compile.h"
+#include "m3_exec.h"
 
-#if d_m3LogOutput
+#ifdef DEBUG
 
 typedef struct OpInfo
 {
@@ -65,26 +66,22 @@ cstr_t  SPrintFuncTypeSignature  (IM3FuncType i_funcType)
 
     sprintf (string, "(");
 
-    u32 numArgs = i_funcType->numArgs;
-    u32 numRets = i_funcType->numRets;
-    u8 * types = i_funcType->types;
-
-    for (u32 i = 0; i < numArgs; ++i)
+    for (u32 i = 0; i < i_funcType->numArgs; ++i)
     {
         if (i != 0)
             strcat (string, ", ");
 
-        strcat (string, GetTypeName (types [numRets + i]));
+        strcat (string, GetTypeName (d_FuncArgType(i_funcType, i)));
     }
 
     strcat (string, ") -> ");
 
-    for (u32 i = 0; i < numRets; ++i)
+    for (u32 i = 0; i < i_funcType->numRets; ++i)
     {
         if (i != 0)
             strcat (string, ", ");
 
-        strcat (string, GetTypeName (types [i]));
+        strcat (string, GetTypeName (d_FuncRetType(i_funcType, i)));
     }
 
     return string;
@@ -103,9 +100,9 @@ size_t  SPrintArg  (char * o_string, size_t i_n, m3stack_t i_sp, u8 i_type)
         len = snprintf (o_string, i_n, "%" PRIi64, * (i64 *) i_sp);
 #if d_m3HasFloat
     else if (i_type == c_m3Type_f32)
-        len = snprintf (o_string, i_n, "%f",  * (f32 *) i_sp);
+        len = snprintf (o_string, i_n, "%" PRIf32, * (f32 *) i_sp);
     else if (i_type == c_m3Type_f64)
-        len = snprintf (o_string, i_n, "%lf", * (f64 *) i_sp);
+        len = snprintf (o_string, i_n, "%" PRIf64, * (f64 *) i_sp);
 #endif
 
     len = M3_MAX (0, len);
@@ -131,11 +128,10 @@ cstr_t  SPrintFunctionArgList  (IM3Function i_function, m3stack_t i_sp)
     if (funcType)
     {
         u32 numArgs = funcType->numArgs;
-        u8 * argTypes = funcType->types + funcType->numRets;
 
         for (u32 i = 0; i < numArgs; ++i)
         {
-            u8 type = argTypes [i];
+            u8 type = d_FuncArgType(funcType, i);
 
             ret = snprintf (s, e-s, "%s: ", c_waTypes [type]);
             s += M3_MAX (0, ret);
@@ -205,7 +201,8 @@ d_m3Decoder (Entry)
 {
     IM3Function function = fetch (IM3Function);
 
-    sprintf (o_string, "%s", function->name);
+    // only prints out the first registered name for the function
+    sprintf (o_string, "%s", m3_GetFunctionName(function));
 }
 
 
@@ -452,5 +449,5 @@ void  log_emit  (IM3Compilation o, IM3Operation i_operation)
 # endif
 }
 
-#endif //d_m3LogOutput
+#endif // DEBUG
 

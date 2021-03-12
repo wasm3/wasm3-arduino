@@ -353,6 +353,8 @@ typedef int8_t          i8;
 
 # if defined (M3_COMPILER_MSVC)
 #   define vectorcall   // For MSVC, better not to specify any call convention
+# elif defined(__MINGW32__)
+#   define vectorcall
 # elif defined(WIN32)
 #   define vectorcall   __vectorcall
 # elif defined (ESP8266)
@@ -404,9 +406,6 @@ typedef int8_t          i8;
 
 # if defined(ARDUINO) || defined(PARTICLE) || defined(PLATFORMIO) || defined(__MBED__) || \
      defined(ESP8266) || defined(ESP32) || defined(BLUE_PILL) || defined(WM_W600) || defined(FOMU)
-#  ifndef d_m3LogOutput
-#    define d_m3LogOutput                       0
-#  endif
 #  ifndef d_m3VerboseLogs
 #    define d_m3VerboseLogs                     0
 #  endif

@@ -43,6 +43,9 @@ typedef uint8_t         u8;
 typedef int8_t          i8;
 #endif // d_m3ShortTypesDefined
 
+#define PRIf32          "f"
+#define PRIf64          "lf"
+
 typedef const void *            m3ret_t;
 typedef const void *            voidptr_t;
 typedef const char *            cstr_t;
@@ -65,7 +68,7 @@ typedef m3slot_t *              m3stack_t;
 typedef
 const void * const  cvptr_t;
 
-# if d_m3LogOutput && defined (DEBUG)
+# if defined (DEBUG)
 
 #   define d_m3Log(CATEGORY, FMT, ...)                  printf (" %8s  |  " FMT, #CATEGORY, ##__VA_ARGS__);
 
@@ -111,12 +114,6 @@ const void * const  cvptr_t;
 #       define m3log_runtime(...) {}
 #   endif
 
-#   if d_m3LogExec
-#       define m3log_exec(CATEGORY, FMT, ...)           d_m3Log(CATEGORY, FMT, ##__VA_ARGS__)
-#   else
-#       define m3log_exec(...) {}
-#   endif
-
 #   define m3log(CATEGORY, FMT, ...)                    m3log_##CATEGORY (CATEGORY, FMT "\n", ##__VA_ARGS__)
 # else
 #   define d_m3Log(CATEGORY, FMT, ...)                  {}
@@ -142,15 +139,20 @@ typedef struct M3MemoryHeader
 }
 M3MemoryHeader;
 
+struct M3CodeMappingPage;
 
 typedef struct M3CodePageHeader
 {
-    struct M3CodePage *     next;
+    struct M3CodePage *           next;
 
-    u32                     lineIndex;
-    u32                     numLines;
-    u32                     sequence;       // this is just used for debugging; could be removed
-    u32                     usageCount;
+    u32                           lineIndex;
+    u32                           numLines;
+    u32                           sequence;       // this is just used for debugging; could be removed
+    u32                           usageCount;
+
+# if d_m3RecordBacktraces
+    struct M3CodeMappingPage *    mapping;
+# endif // d_m3RecordBacktraces
 }
 M3CodePageHeader;
 
@@ -239,6 +241,12 @@ M3Result    Read_utf8               (cstr_t * o_utf8, bytes_t * io_bytes, cbytes
 size_t      SPrintArg               (char * o_string, size_t i_n, m3stack_t i_sp, u8 i_type);
 
 void        ReportError             (IM3Runtime io_runtime, IM3Module i_module, IM3Function i_function, ccstr_t i_errorMessage, ccstr_t i_file, u32 i_lineNum);
+
+# if d_m3RecordBacktraces
+void        PushBacktraceFrame         (IM3Runtime io_runtime, pc_t i_pc);
+void        FillBacktraceFunctionInfo  (IM3Runtime io_runtime, IM3Function i_function);
+void        ClearBacktrace             (IM3Runtime io_runtime);
+# endif
 
 d_m3EndExternC
 

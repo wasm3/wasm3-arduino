@@ -43,7 +43,9 @@ _try {
     _throwif (m3Err_malformedFunctionSignature, maxNumArgs < 0);
     _throwif ("insane argument count", maxNumArgs > d_m3MaxSaneFunctionArgCount);
 
-_   (AllocFuncType (& funcType, maxNumArgs));
+    const unsigned umaxNumArgs = (unsigned)maxNumArgs;
+
+_   (AllocFuncType (& funcType, umaxNumArgs));
 
     bool parsingArgs = false;
     while (* sig)
@@ -65,19 +67,19 @@ _   (AllocFuncType (& funcType, maxNumArgs));
         _throwif ("unknown argument type char", c_m3Type_unknown == type);
 
         if (type == c_m3Type_none)
-        	continue;
+            continue;
 
         if (not parsingArgs)
         {
             _throwif ("malformed function signature; too many return types", funcType->numRets >= 1);
 
-            funcType->types [funcType->numRets++] = type;
+            d_FuncRetType(funcType, funcType->numRets++) = type;
         }
         else
         {
-            _throwif (m3Err_malformedFunctionSignature, funcType->numArgs >= maxNumArgs);  // forgot trailing ')' ?
+            _throwif (m3Err_malformedFunctionSignature, funcType->numArgs >= umaxNumArgs);  // forgot trailing ')' ?
 
-            funcType->types [funcType->numRets + funcType->numArgs++] = type;
+            d_FuncArgType(funcType, funcType->numArgs++) = type;
         }
     }
 
@@ -148,7 +150,7 @@ M3Result  FindAndLinkFunction      (IM3Module       io_module,
                                     ccstr_t         i_functionName,
                                     ccstr_t         i_signature,
                                     voidptr_t       i_function,
-									voidptr_t       i_userdata)
+                                    voidptr_t       i_userdata)
 {
     M3Result result = m3Err_functionLookupFailed;
 

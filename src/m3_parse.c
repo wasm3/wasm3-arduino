@@ -227,9 +227,12 @@ _       (ReadLEB_u32 (& index, & i_bytes, i_end));                              
 
         if (exportKind == d_externalKind_function)
         {
-            if (not io_module->functions [index].name)
+            _throwif(m3Err_wasmMalformed, index >= io_module->numFunctions);
+            u16 numNames = io_module->functions [index].numNames;
+            if (numNames < d_m3MaxDuplicateFunctionImpl)
             {
-                io_module->functions [index].name = utf8;
+                io_module->functions [index].numNames++;
+                io_module->functions [index].names[numNames] = utf8;
                 utf8 = NULL; // ownership transfered to M3Function
             }
         }
@@ -263,8 +266,13 @@ M3Result  Parse_InitExpr  (M3Module * io_module, bytes_t * io_bytes, cbytes_t i_
     M3Result result = m3Err_none;
 
     // this doesn't generate code pages. just walks the wasm bytecode to find the end
-    IM3Runtime rt;
-    M3Compilation compilation = { rt= NULL, io_module, * io_bytes, i_end };
+
+#if defined(d_m3PreferStaticAlloc)
+    static M3Compilation compilation;
+#else
+    M3Compilation compilation;
+#endif
+    compilation = (M3Compilation){ NULL, io_module, * io_bytes, i_end };
 
     result = Compile_BlockStatements (& compilation);
 
@@ -340,7 +348,7 @@ _                   (NormalizeType (& normalType, wasmType));
                 func->module = io_module;
                 func->wasm = start;
                 func->wasmEnd = i_bytes;
-                func->ownsWasmCode = io_module->hasWasmCodeCopy;
+                //func->ownsWasmCode = io_module->hasWasmCodeCopy;
                 func->numLocals = numLocals;
             }
             else _throw (m3Err_wasmSectionOverrun);
@@ -472,9 +480,10 @@ _               (Read_utf8 (& name, & i_bytes, i_end));
 
                 if (index < io_module->numFunctions)
                 {
-                    if (not io_module->functions [index].name)
+                    if (io_module->functions [index].numNames == 0)
                     {
-                        io_module->functions [index].name = name;                   m3log (parse, "    naming function%5d:  %s", index, name);
+                        io_module->functions [index].numNames = 1;
+                        io_module->functions [index].names[0] = name;        m3log (parse, "    naming function%5d:  %s", index, name);
                         name = NULL; // transfer ownership
                     }
 //                          else m3log (parse, "prenamed: %s", io_module->functions [index].name);
@@ -543,11 +552,14 @@ _   (m3Alloc (& module, M3Module, 1));
 
     module->name = ".unnamed";                                                      m3log (parse, "load module: %d bytes", i_numBytes);
     module->startFunction = -1;
-    module->hasWasmCodeCopy = false;
+    //module->hasWasmCodeCopy = false;
     module->environment = i_environment;
 
     const u8 * pos = i_bytes;
     const u8 * end = pos + i_numBytes;
+
+    module->wasmStart = pos;
+    module->wasmEnd = end;
 
     u32 magic, version;
 _   (Read_u32 (& magic, & pos, end));
@@ -570,7 +582,7 @@ _       (ReadLEB_u7 (& section, & pos, end));
         {
             u32 sectionLength;
 _           (ReadLEB_u32 (& sectionLength, & pos, end));
-			_throwif(m3Err_wasmMalformed, pos + sectionLength > end);
+            _throwif(m3Err_wasmMalformed, pos + sectionLength > end);
 _           (ParseModuleSection (module, section, pos, sectionLength));
 
             pos += sectionLength;

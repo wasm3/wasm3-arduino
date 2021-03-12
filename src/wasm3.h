@@ -10,12 +10,13 @@
 
 #define M3_VERSION_MAJOR 0
 #define M3_VERSION_MINOR 4
-#define M3_VERSION_REV   8
-#define M3_VERSION       "0.4.8"
+#define M3_VERSION_REV   9
+#define M3_VERSION       "0.4.9"
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <stdarg.h>
 
 #if defined(__cplusplus)
 extern "C" {
@@ -27,7 +28,6 @@ struct M3Environment;   typedef struct M3Environment *  IM3Environment;
 struct M3Runtime;       typedef struct M3Runtime *      IM3Runtime;
 struct M3Module;        typedef struct M3Module *       IM3Module;
 struct M3Function;      typedef struct M3Function *     IM3Function;
-
 
 typedef struct M3ErrorInfo
 {
@@ -41,11 +41,28 @@ typedef struct M3ErrorInfo
     uint32_t        line;
 
     const char *    message;
+} M3ErrorInfo;
+
+typedef struct M3BacktraceFrame
+{
+    uint32_t                     moduleOffset;
+    IM3Function                  function;
+
+    struct M3BacktraceFrame *    next;
 }
-M3ErrorInfo;
+M3BacktraceFrame, * IM3BacktraceFrame;
 
+typedef struct M3BacktraceInfo
+{
+    IM3BacktraceFrame      frames;
+    IM3BacktraceFrame      lastFrame;    // can be M3_BACKTRACE_TRUNCATED
+}
+M3BacktraceInfo, * IM3BacktraceInfo;
 
-enum // EWaTypes
+// Constants
+#define M3_BACKTRACE_TRUNCATED      (void*)(SIZE_MAX)
+
+typedef enum M3ValueType
 {
     c_m3Type_none   = 0,
     c_m3Type_i32    = 1,
@@ -54,21 +71,23 @@ enum // EWaTypes
     c_m3Type_f64    = 4,
 
     c_m3Type_unknown
-};
+} M3ValueType;
 
 
 typedef struct M3ImportInfo
 {
     const char *    moduleUtf8;
     const char *    fieldUtf8;
-
-//  unsigned char   type;
 }
-M3ImportInfo;
-
-typedef M3ImportInfo * IM3ImportInfo;
+M3ImportInfo, * IM3ImportInfo;
 
 
+typedef struct M3ImportContext
+{
+    void *          userdata;
+    IM3Function     function;
+}
+M3ImportContext, * IM3ImportContext;
 
 // -------------------------------------------------------------------------------------------------------------------------------
 //  error codes
@@ -116,7 +135,6 @@ d_m3ErrorConst  (functionStackOverflow,         "compiling function overran its 
 d_m3ErrorConst  (functionStackUnderrun,         "compiling function underran the stack")
 d_m3ErrorConst  (mallocFailedCodePage,          "memory allocation failed when acquiring a new M3 code page")
 d_m3ErrorConst  (settingImmutableGlobal,        "attempting to set an immutable global")
-d_m3ErrorConst  (optimizerFailed,               "optimizer failed") // not a fatal error. a result,
 
 // runtime errors
 d_m3ErrorConst  (missingCompiledCode,           "function is missing compiled m3 code")
@@ -184,13 +202,16 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
     M3Result            m3_LoadModule               (IM3Runtime io_runtime,  IM3Module io_module);
     //  LoadModule transfers ownership of a module to the runtime. Do not free modules once successfully imported into the runtime
 
-    typedef const void * (* M3RawCall) (IM3Runtime runtime, uint64_t * _sp, void * _mem, void * userdata);
+    // Calling m3_RunStart is optional
+    M3Result            m3_RunStart                 (IM3Module i_module);
+
+    typedef const void * (* M3RawCall) (IM3Runtime runtime, IM3ImportContext _ctx, uint64_t * _sp, void * _mem);
 
     M3Result            m3_LinkRawFunction          (IM3Module              io_module,
                                                      const char * const     i_moduleName,
                                                      const char * const     i_functionName,
                                                      const char * const     i_signature,
-													 M3RawCall              i_function);
+                                                     M3RawCall              i_function);
 
     M3Result            m3_LinkRawFunctionEx        (IM3Module              io_module,
                                                      const char * const     i_moduleName,
@@ -198,6 +219,9 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
                                                      const char * const     i_signature,
                                                      M3RawCall              i_function,
                                                      const void *           i_userdata);
+
+    const char*         m3_GetModuleName            (IM3Module i_module);
+    IM3Runtime          m3_GetModuleRuntime         (IM3Module i_module);
 
 //-------------------------------------------------------------------------------------------------------------------------------
 //  functions
@@ -208,13 +232,27 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
                                                      IM3Runtime             i_runtime,
                                                      const char * const     i_functionName);
 
-    M3Result            m3_Call                     (IM3Function i_function);
-    M3Result            m3_CallWithArgs             (IM3Function i_function, uint32_t i_argc, const char * const * i_argv);
+    uint32_t            m3_GetArgCount              (IM3Function i_function);
+    uint32_t            m3_GetRetCount              (IM3Function i_function);
+    M3ValueType         m3_GetArgType               (IM3Function i_function, uint32_t i_index);
+    M3ValueType         m3_GetRetType               (IM3Function i_function, uint32_t i_index);
+
+    M3Result            m3_CallV                    (IM3Function i_function, ...);
+    M3Result            m3_CallVL                   (IM3Function i_function, va_list i_args);
+    M3Result            m3_Call                     (IM3Function i_function, uint32_t i_argc, const void * i_argptrs[]);
+    M3Result            m3_CallArgv                 (IM3Function i_function, uint32_t i_argc, const char * i_argv[]);
+
+    M3Result            m3_GetResultsV              (IM3Function i_function, ...);
+    M3Result            m3_GetResultsVL             (IM3Function i_function, va_list o_rets);
+    M3Result            m3_GetResults               (IM3Function i_function, uint32_t i_retc, const void * o_retptrs[]);
 
     // IM3Functions are valid during the lifetime of the originating runtime
 
-    void                m3_GetErrorInfo             (IM3Runtime i_runtime, M3ErrorInfo* info);
+    void                m3_GetErrorInfo             (IM3Runtime i_runtime, M3ErrorInfo* o_info);
     void                m3_ResetErrorInfo           (IM3Runtime i_runtime);
+
+    const char*         m3_GetFunctionName          (IM3Function i_function);
+    IM3Module           m3_GetFunctionModule        (IM3Function i_function);
 
 //-------------------------------------------------------------------------------------------------------------------------------
 //  debug info
@@ -223,6 +261,9 @@ d_m3ErrorConst  (trapStackOverflow,             "[trap] stack overflow")
     void                m3_PrintRuntimeInfo         (IM3Runtime i_runtime);
     void                m3_PrintM3Info              (void);
     void                m3_PrintProfilerInfo        (void);
+
+    // The runtime owns the backtrace, do not free the backtrace you obtain. Returns NULL if there's no backtrace.
+    IM3BacktraceInfo    m3_GetBacktrace             (IM3Runtime i_runtime);
 
 #if defined(__cplusplus)
 }

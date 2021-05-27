@@ -8,7 +8,7 @@
 #ifndef m3_exec_h
 #define m3_exec_h
 
-// TODO: all these functions could move over to the .c at some point. normally, i'd say screw it,
+// TODO: all these functions could move over to the .c at some point. normally, I'd say screw it,
 // but it might prove useful to be able to compile m3_exec alone w/ optimizations while the remaining
 // code is at debug O0
 
@@ -89,6 +89,22 @@ d_m3BeginExternC
     #define d_m3TraceLoad(TYPE,offset,val)
     #define d_m3TraceStore(TYPE,offset,val)
 #endif
+
+#ifdef DEBUG
+  #define d_outOfBounds newTrap (ErrorRuntime (m3Err_trapOutOfBoundsMemoryAccess,   \
+                        _mem->runtime, "memory size: %zu; access offset: %zu",      \
+                        _mem->length, operand))
+
+#   define d_outOfBoundsMemOp(OFFSET, SIZE) newTrap (ErrorRuntime (m3Err_trapOutOfBoundsMemoryAccess,   \
+                      _mem->runtime, "memory size: %zu; access offset: %zu; size: %u",     \
+                      _mem->length, OFFSET, SIZE))
+#else
+  #define d_outOfBounds newTrap (m3Err_trapOutOfBoundsMemoryAccess)
+
+#   define d_outOfBoundsMemOp(OFFSET, SIZE) newTrap (m3Err_trapOutOfBoundsMemoryAccess)
+
+#endif
+
 
 d_m3RetSig  Call  (d_m3OpSig)
 {
@@ -552,7 +568,7 @@ d_m3Op  (CallIndirect)
             if (LIKELY(type == function->funcType))
             {
                 if (UNLIKELY(not function->compiled))
-                    r = Compile_Function (function);
+                    r = CompileFunction (function);
 
                 if (LIKELY(not r))
                 {
@@ -606,13 +622,14 @@ d_m3Op  (CallRawFunction)
 
     const int nArgs = ftype->numArgs;
     const int nRets = ftype->numRets;
+    u64 * args = sp + nRets;
     for (int i=0; i<nArgs; i++) {
         const int type = ftype->types[nRets + i];
         switch (type) {
-        case c_m3Type_i32:  outp += snprintf(outp, oute-outp, "%" PRIi32, *(i32*)(sp+i)); break;
-        case c_m3Type_i64:  outp += snprintf(outp, oute-outp, "%" PRIi64, *(i64*)(sp+i)); break;
-        case c_m3Type_f32:  outp += snprintf(outp, oute-outp, "%" PRIf32, *(f32*)(sp+i)); break;
-        case c_m3Type_f64:  outp += snprintf(outp, oute-outp, "%" PRIf64, *(f64*)(sp+i)); break;
+        case c_m3Type_i32:  outp += snprintf(outp, oute-outp, "%" PRIi32, *(i32*)(args+i)); break;
+        case c_m3Type_i64:  outp += snprintf(outp, oute-outp, "%" PRIi64, *(i64*)(args+i)); break;
+        case c_m3Type_f32:  outp += snprintf(outp, oute-outp, "%" PRIf32, *(f32*)(args+i)); break;
+        case c_m3Type_f64:  outp += snprintf(outp, oute-outp, "%" PRIf64, *(f64*)(args+i)); break;
         default:            outp += snprintf(outp, oute-outp, "<type %d>", type);         break;
         }
         outp += snprintf(outp, oute-outp, (i < nArgs-1) ? ", " : ")");
@@ -632,7 +649,7 @@ d_m3Op  (CallRawFunction)
 
 #if d_m3EnableStrace
     if (UNLIKELY(possible_trap)) {
-        d_m3TracePrint("%s -> %s", outbuff, possible_trap);
+        d_m3TracePrint("%s -> %s", outbuff, (char*)possible_trap);
     } else {
         switch (GetSingleRetType(ftype)) {
         case c_m3Type_none: d_m3TracePrint("%s", outbuff); break;
@@ -652,7 +669,7 @@ d_m3Op  (CallRawFunction)
 }
 
 
-d_m3Op  (MemCurrent)
+d_m3Op  (MemSize)
 {
     IM3Memory memory            = m3MemInfo (_mem);
 
@@ -685,9 +702,47 @@ d_m3Op  (MemGrow)
 }
 
 
+d_m3Op  (MemCopy)
+{
+    u32 size = (u32) _r0;
+    u64 source = slot (u32);
+    u64 destination = slot (u32);
+
+    if (destination + size <= _mem->length)
+    {
+        if (source + size <= _mem->length)
+        {
+            u8 * dst = m3MemData (_mem) + destination;
+            u8 * src = m3MemData (_mem) + source;
+            memmove (dst, src, size);
+
+            nextOp ();
+        }
+        else d_outOfBoundsMemOp (source, size);
+    }
+    else d_outOfBoundsMemOp (destination, size);
+}
+
+
+d_m3Op  (MemFill)
+{
+    u32 size = (u32) _r0;
+    u32 byte = slot (u32);
+    u64 destination = slot (u32);
+
+    if (destination + size <= _mem->length)
+    {
+        u8 * mem8 = m3MemData (_mem) + destination;
+        memset (mem8, (u8) byte, size);
+        nextOp ();
+    }
+    else d_outOfBoundsMemOp (destination, size);
+}
+
+
 // it's a debate: should the compilation be trigger be the caller or callee page.
 // it's a much easier to put it in the caller pager. if it's in the callee, either the entire page
-// has be left dangling or it's just a stub that jumps to a newly acquire page.  In Gestalt, I opted
+// has be left dangling or it's just a stub that jumps to a newly acquired page.  In Gestalt, I opted
 // for the stub approach. Stubbing makes it easier to dynamically free the compilation. You can also
 // do both.
 d_m3Op  (Compile)
@@ -699,11 +754,11 @@ d_m3Op  (Compile)
     m3ret_t result = m3Err_none;
 
     if (UNLIKELY(not function->compiled)) // check to see if function was compiled since this operation was emitted.
-        result = Compile_Function (function);
+        result = CompileFunction (function);
 
     if (not result)
     {
-        // patch up compiled pc and call rewriten op_Call
+        // patch up compiled pc and call rewritten op_Call
         * ((void**) --_pc) = (void*) (function->compiled);
         --_pc;
         nextOpDirect ();
@@ -732,7 +787,7 @@ d_m3Op  (Entry)
 #if defined(DEBUG)
         function->hits++;
 #endif
-        u8 * stack = (u8 *) ((m3slot_t *) _sp + function->numArgSlots);
+        u8 * stack = (u8 *) ((m3slot_t *) _sp + function->numRetAndArgSlots);
 
         memset (stack, 0x0, function->numLocalBytes);
         stack += function->numLocalBytes;
@@ -743,13 +798,7 @@ d_m3Op  (Entry)
         }
 
 #if d_m3EnableStrace >= 2
-        u16 numNames = 0;
-        cstr_t *names = GetFunctionNames(function, &numNames);
-        if (numNames) {
-            d_m3TracePrint("%s %s {", names[0], SPrintFunctionArgList (function, _sp));
-        } else {
-            d_m3TracePrint("$%d %s {", function->index, SPrintFunctionArgList (function, _sp));
-        }
+        d_m3TracePrint("%s %s {", m3_GetFunctionName(function), SPrintFunctionArgList (function, _sp));
         trace_rt->callDepth++;
 #endif
 
@@ -800,7 +849,7 @@ d_m3Op  (Loop)
         d_m3TracePrint("iter {");
         trace_rt->callDepth++;
 #endif
-        r = nextOpImpl ();                     // printf ("loop: %p\n", r);
+        r = nextOpImpl ();
 
 #if d_m3EnableStrace >= 3
         trace_rt->callDepth--;
@@ -1105,32 +1154,38 @@ d_m3Op  (BranchIf_s)
 }
 
 
-// branching to blocks that produce a (int) value
-#define d_m3BranchIf(TYPE, LABEL, COND)         \
-d_m3Op  (TYPE##_BranchIf_##LABEL##s)            \
-{                                               \
-    i32 condition   = (i32) COND;               \
-    TYPE value      = slot (TYPE);              \
-    pc_t branch     = immediate (pc_t);         \
-                                                \
-    if (condition)                              \
-    {                                           \
-        _r0 = value;                            \
-        jumpOp (branch);                        \
-    }                                           \
-    else nextOp ();                             \
+d_m3Op  (BranchIfPrologue_r)
+{
+    i32 condition   = (i32) _r0;
+    pc_t branch     = immediate (pc_t);
+
+    if (condition)
+    {
+        // this is the "prologue" that ends with
+        // a plain branch to the actual target
+        nextOp ();
+    }
+    else jumpOp (branch); // jump over the prologue
 }
 
 
-d_m3BranchIf (i32, r, _r0)
-d_m3BranchIf (i64, r, _r0)
-d_m3BranchIf (i32, s, slot (i32))
-d_m3BranchIf (i64, s, slot (i32))
+d_m3Op  (BranchIfPrologue_s)
+{
+    i32 condition   = slot (i32);
+    pc_t branch     = immediate (pc_t);
 
+    if (condition)
+    {
+        nextOp ();
+    }
+    else jumpOp (branch);
+}
 
 
 d_m3Op  (ContinueLoop)
 {
+    m3StackCheck();
+
     // TODO: this is where execution can "escape" the M3 code and callback to the client / fiber switch
     // OR it can go in the Loop operation. I think it's best to do here. adding code to the loop operation
     // has the potential to increase its native-stack usage. (don't forget ContinueLoopIf too.)
@@ -1229,14 +1284,6 @@ d_m3Op  (SetGlobal_f64)
 #  define m3MemCheck(x) true
 #else
 #  define m3MemCheck(x) LIKELY(x)
-#endif
-
-#ifdef DEBUG
-  #define d_outOfBounds newTrap (ErrorRuntime (m3Err_trapOutOfBoundsMemoryAccess,   \
-                        _mem->runtime, "memory size: %zu; access offset: %zu",      \
-                        _mem->length, operand))
-#else
-  #define d_outOfBounds newTrap (m3Err_trapOutOfBoundsMemoryAccess)
 #endif
 
 // memcpy here is to support non-aligned access on some platforms.
@@ -1404,29 +1451,6 @@ d_m3Store_i (i64, i32)
 d_m3Store_i (i64, i64)
 
 #undef m3MemCheck
-
-//---------------------------------------------------------------------------------------------------------------------
-# if 0 //d_m3EnableOptimizations
-//---------------------------------------------------------------------------------------------------------------------
-
-    #define d_m3BinaryOpWith1_i(TYPE, NAME, OPERATION)  \
-    d_m3Op(TYPE##_##NAME)                               \
-    {                                                   \
-        _r0 = _r0 OPERATION 1;                          \
-        nextOp ();                                      \
-    }
-
-    d_m3BinaryOpWith1_i (u64, Increment,    +)
-    d_m3BinaryOpWith1_i (u32, Decrement,    -)
-
-    d_m3BinaryOpWith1_i (u32, ShiftLeft1,   <<)
-    d_m3BinaryOpWith1_i (u64, ShiftLeft1,   <<)
-
-    d_m3BinaryOpWith1_i (u32, ShiftRight1,  >>)
-    d_m3BinaryOpWith1_i (u64, ShiftRight1,  >>)
-
-//---------------------------------------------------------------------------------------------------------------------
-# endif
 
 
 //---------------------------------------------------------------------------------------------------------------------

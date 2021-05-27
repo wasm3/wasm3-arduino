@@ -24,6 +24,10 @@
 #   define d_m3MaxFunctionStackHeight           2000    // TODO: comment on upper limit
 # endif
 
+# ifndef d_m3MaxLinearMemoryPages
+#   define d_m3MaxLinearMemoryPages             32768
+# endif
+
 # ifndef d_m3MaxFunctionSlots
 #   define d_m3MaxFunctionSlots                 ((d_m3MaxFunctionStackHeight)*2)
 # endif
@@ -36,8 +40,12 @@
 #   define d_m3MaxDuplicateFunctionImpl         3
 # endif
 
-# ifndef d_m3VerboseLogs
-#   define d_m3VerboseLogs                      1
+# ifndef d_m3EnableExtendedOpcodes
+#   define d_m3EnableExtendedOpcodes            1
+# endif
+
+# ifndef d_m3VerboseErrorMessages
+#   define d_m3VerboseErrorMessages             1
 # endif
 
 # ifndef d_m3FixedHeap
@@ -60,6 +68,11 @@
 # ifndef d_m3RecordBacktraces
 #   define d_m3RecordBacktraces                 0
 # endif
+
+# ifndef d_m3EnableExceptionBreakpoint
+#   define d_m3EnableExceptionBreakpoint        0       // see m3_exception.h
+# endif
+
 
 // profiling and tracing ------------------------------------------------------
 

@@ -48,15 +48,15 @@ M3Result  BridgeToNewPageIfNecessary  (IM3Compilation o)
 
 M3Result  EmitOp  (IM3Compilation o, IM3Operation i_operation)
 {
-    M3Result result = m3Err_none;                                 d_m3Assert (i_operation or IsStackPolymorphic(o));
+    M3Result result = m3Err_none;                                 d_m3Assert (i_operation or IsStackPolymorphic (o));
 
     // it's OK for page to be null; when compile-walking the bytecode without emitting
     if (o->page)
     {
 # if d_m3EnableOpTracing
         if (i_operation != op_DumpStack)
-# endif
             o->numEmits++;
+# endif
 
         result = BridgeToNewPageIfNecessary (o);
 
@@ -87,10 +87,14 @@ void  EmitSlotOffset  (IM3Compilation o, const i32 i_offset)
 }
 
 
-void  EmitPointer  (IM3Compilation o, const void * const i_pointer)
+pc_t  EmitPointer  (IM3Compilation o, const void * const i_pointer)
 {
+    pc_t ptr = GetPagePC (o->page);
+
     if (o->page)
         EmitWord (o->page, i_pointer);
+
+    return ptr;
 }
 
 void * ReservePointer (IM3Compilation o)

@@ -9,7 +9,6 @@
 #include "NotoSansBold15.h"
 
 #include <wasm3.h>
-#include <m3_api_defs.h>
 
 #define NATIVE_STACK_SIZE   (32*1024)
 

@@ -9,9 +9,9 @@
 #define wasm3_h
 
 #define M3_VERSION_MAJOR 0
-#define M3_VERSION_MINOR 4
-#define M3_VERSION_REV   9
-#define M3_VERSION       "0.4.9"
+#define M3_VERSION_MINOR 5
+#define M3_VERSION_REV   0
+#define M3_VERSION       "0.5.0"
 
 #include <stdlib.h>
 #include <stdint.h>

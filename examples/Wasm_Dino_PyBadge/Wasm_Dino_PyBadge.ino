@@ -7,7 +7,6 @@
 #include "Adafruit_Arcada.h"
 
 #include <wasm3.h>
-#include <m3_api_defs.h>
 
 #define DISPLAY_BRIGHTESS   128    // 0..255
 

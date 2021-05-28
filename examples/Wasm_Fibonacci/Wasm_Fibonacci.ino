@@ -5,7 +5,6 @@
  */
 
 #include <wasm3.h>
-#include <m3_config.h>
 
 /*
  * WebAssembly app (recursive Fibonacci)

@@ -15,7 +15,7 @@ This library can be used with
 
 ## Supported devices
 
-Wasm3 requires at least **~64Kb** Flash and **~10Kb** RAM even for minimal functionality.
+Wasm3 requires at least **~64Kb** Flash and **~10Kb** RAM for minimal functionality.
 
 The library was verified to work with:  
 `ESP32`, `ESP8266`, `Arduino MKR`, `Particle`,  
